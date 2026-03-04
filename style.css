@@ -1,6 +1,6 @@
 :root {
   background: #0b0b10;
-  color: #00ff88; /* retro arcade green */
+  color: #00ff88;
 }
 
 body {
@@ -16,22 +16,18 @@ body {
   padding: 16px;
 }
 
-#game {
-  border: 4px solid #bc8dff;
-}
-.hint {
-  font-size: 10px;
-  opacity: 0.9;
-  margin-bottom: 12px;
-}
-
 h1 {
   color: #00ff88;
-  text-shadow: 0 0 8px #00ff88;
+  text-shadow: 0 0 8px #00ff88, 0 0 24px #00ff8866;
+  margin-bottom: 0;
+  letter-spacing: 4px;
 }
 
-canvas {
+/* Single border only — removed the conflicting canvas rule */
+#game {
+  display: block;
   image-rendering: pixelated;
-  border: 3px solid #00ff88;
-  background: #000;
+  border: 4px solid #bc8dff;
+  box-shadow: 0 0 18px #bc8dff66;
+  background: #3c4059;
 }

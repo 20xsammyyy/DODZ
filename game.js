@@ -140,6 +140,22 @@ let enemies = [];
 let spawnTimer = 0;
 let score = 0;
 let best = Number(localStorage.getItem("dodz_best") || 0);
+
+// Leaderboard — top 10 scores stored in localStorage
+function loadLeaderboard() {
+  try { return JSON.parse(localStorage.getItem("dodz_lb") || "[]"); }
+  catch { return []; }
+}
+function saveToLeaderboard(sc, mode) {
+  const lb = loadLeaderboard();
+  const modeNames = ["EASY", "MED", "HARD"];
+  const now = new Date();
+  const date = (now.getMonth()+1) + "/" + now.getDate() + "/" + String(now.getFullYear()).slice(2);
+  lb.push({ score: sc, mode: modeNames[mode], date });
+  lb.sort((a, b) => b.score - a.score);
+  lb.splice(10); // keep top 10
+  localStorage.setItem("dodz_lb", JSON.stringify(lb));
+}
 let blinkT = 0;
 let titleMenuIndex = 0; // 0=start, 1=howtoplay, 2=controls
 
@@ -412,8 +428,8 @@ addEventListener("keydown", (e) => {
 
   if (e.key === " " || e.code === "Space") {
     unlockSound();
-    if (state === "howtoplay" || state === "controls") {
-      state = "title"; blinkT = 0;
+    if (state === "howtoplay" || state === "controls" || state === "leaderboard") {
+      state = "title"; blinkT = 0; titleMenuIndex = 0;
     } else if (state === "title" || state === "gameover") {
       if (titleMenuIndex === 0) {
         state = "modeselect";
@@ -422,6 +438,8 @@ addEventListener("keydown", (e) => {
         state = "howtoplay";
       } else if (titleMenuIndex === 2) {
         state = "controls";
+      } else if (titleMenuIndex === 3) {
+        state = "leaderboard";
       }
     } else if (state === "modeselect") {
       playSfx(SFX.start);
@@ -434,11 +452,14 @@ addEventListener("keydown", (e) => {
     if (e.key === "ArrowRight") selectedMode = (selectedMode + 1) % 3;
   }
   if (state === "title") {
-    if (e.key === "ArrowUp")   titleMenuIndex = (titleMenuIndex + 2) % 3;
-    if (e.key === "ArrowDown") titleMenuIndex = (titleMenuIndex + 1) % 3;
+    if (e.key === "ArrowUp")   titleMenuIndex = (titleMenuIndex + 3) % 4;
+    if (e.key === "ArrowDown") titleMenuIndex = (titleMenuIndex + 1) % 4;
   }
-  if ((state === "howtoplay" || state === "controls") && e.key === "Escape") {
-    state = "title"; blinkT = 0;
+  if (state === "gameover" && e.key.toLowerCase() === "s") {
+    state = "leaderboard";
+  }
+  if ((state === "howtoplay" || state === "controls" || state === "leaderboard") && e.key === "Escape") {
+    state = "title"; blinkT = 0; titleMenuIndex = 0;
   }
 });
 
@@ -522,7 +543,7 @@ function drawParticles() {
 function update() {
   blinkT = (blinkT + 1) % 60;
 
-  if (state === "title" || state === "howtoplay" || state === "controls") {
+  if (state === "title" || state === "howtoplay" || state === "controls" || state === "leaderboard") {
     titleFrameTimer++;
     if (titleFrameTimer >= 10) {
       titleFrameTimer = 0;
@@ -615,6 +636,7 @@ function update() {
     if (hit(player, e)) {
       playSfx(SFX.hit);
       state = "gameover";
+      saveToLeaderboard(score, selectedMode);
       if (score > best) {
         best = score;
         localStorage.setItem("dodz_best", String(best));
@@ -1756,7 +1778,7 @@ function drawTitleScreen() {
 
   // Pixie sitting on ground
   const catX = Math.floor(W * 0.15);
-  const catY = Math.floor(H * 0.73) - DRAW_H + 25;
+  const catY = Math.floor(H * 0.73) - DRAW_H + 22;
   ctx.drawImage(sitImg, titleFrame * FRAME_W, 0, FRAME_W, FRAME_H, catX, catY, DRAW_W, DRAW_H);
 
   // === TITLE TEXT — big, centred-right ===
@@ -1773,9 +1795,9 @@ function drawTitleScreen() {
   ctx.fillText("PIXIE HATES WATER", W/2, 120);
 
   // === MENU BOX ===
-  const menuItems = ["START GAME", "HOW TO PLAY", "CONTROLS"];
-  const boxW = 190, boxH = 90;
-  const boxX = W/2 - boxW/2, boxY = H * 0.38;
+  const menuItems = ["START GAME", "HOW TO PLAY", "CONTROLS", "SCORES"];
+  const boxW = 190, boxH = 106;
+  const boxX = W/2 - boxW/2, boxY = H * 0.36;
 
   // Box shadow
   ctx.fillStyle = "rgba(0,0,0,0.6)";
@@ -1813,7 +1835,7 @@ function drawTitleScreen() {
   ctx.fillText("Press ↑↓ ; SPACE to CHOOSE", W/2, boxY + boxH + 20);
 
   // Blinking press space (under Pixie)
-  const promptY = Math.floor(H * 0.73) + 34;
+  const promptY = Math.floor(H * 0.73) + 28;
 
   if (blinkT < 30) {
     ctx.textAlign = "center";                 // ensure centered
@@ -1877,9 +1899,9 @@ function drawHowToPlay() {
 
   ctx.textAlign = "center";
   if (blinkT < 30) {
-    ctx.font = "6px 'Press Start 2P'";
+    ctx.font = "9px Orbitron, sans-serif";
     ctx.fillStyle = PAL.accent;
-    ctx.fillText("SPACE TO GO BACK", W/2, H - 16);
+    ctx.fillText("ESC / SPACE TO GO BACK", W/2, H - 16);
   }
   ctx.textAlign = "left";
 }
@@ -1890,13 +1912,14 @@ function drawControls() {
   ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
 
   ctx.textAlign = "center";
-  ctx.font = "9px 'Press Start 2P'";
+  ctx.font = "9px Orbitron, sans-serif";
   ctx.fillStyle = PAL.accent;
   ctx.fillText("CONTROLS", W/2, 40);
 
   const controls = [
     ["← →", "MOVE PIXIE"],
     ["SPACE", "START / CONFIRM"],
+    ["ESC", "EXIT SCREEN"],
     ["", ""],
     ["TIPS:", ""],
     ["", "TO HAVE MORE TIME TO REACT STAY"],
@@ -1935,7 +1958,7 @@ function drawControls() {
   if (blinkT < 30) {
     ctx.font = "6px 'Press Start 2P'";
     ctx.fillStyle = PAL.accent;
-    ctx.fillText("SPACE TO GO BACK", W/2, H - 16);
+    ctx.fillText("ESC / SPACE TO GO BACK", W/2, H - 16);
   }
   ctx.textAlign = "left";
 }
@@ -1998,8 +2021,133 @@ function drawGameOver() {
     ctx.fillText("PRESS SPACE TO RETRY", cx, cy + 115);
   }
 
+  // Scores link
+  ctx.fillStyle = "rgba(212,250,255,0.5)";
+  ctx.font = "5px 'Press Start 2P'";
+  ctx.fillText("S — VIEW SCORES", cx, cy + 134);
+
   ctx.textAlign = "left";
 }
+
+function drawLeaderboard() {
+  // Dark bg
+  ctx.fillStyle = "#080610";
+  ctx.fillRect(0, 0, W, H);
+
+  // Header bar
+  ctx.fillStyle = "#16102a";
+  ctx.fillRect(0, 0, W, 46);
+  ctx.strokeStyle = "#f0c040";
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, 46); ctx.lineTo(W, 46); ctx.stroke();
+
+  // Trophy icon (pixel drawn)
+  const tx = 20, ty = 26;
+  ctx.fillStyle = "#f0c040";
+  ctx.fillRect(tx, ty-10, 16, 12);       // cup body
+  ctx.fillRect(tx+2, ty+2, 12, 6);       // cup lower
+  ctx.fillRect(tx+5, ty+8, 6, 4);        // stem
+  ctx.fillRect(tx+3, ty+12, 10, 3);      // base
+  ctx.fillRect(tx-3, ty-8, 3, 7);        // left handle
+  ctx.fillRect(tx+16, ty-8, 3, 7);       // right handle
+  ctx.fillStyle = "#ffd060";
+  ctx.fillRect(tx+4, ty-8, 8, 6);        // shine
+
+  // Title
+  ctx.textAlign = "center";
+  ctx.font = "9px 'Press Start 2P'";
+  ctx.fillStyle = "#f0c040";
+  ctx.fillText("HIGH SCORES", W/2 + 10, 30);
+
+  const lb = loadLeaderboard();
+  const rowColors = ["#ffd700","#e8c04a","#cc9933","#aaaaaa","#999999","#888888","#7a7aaa","#6a6a99","#5a5a88","#4a4a77"];
+  const modeColors = { EASY: "#00ff88", MED: "#ffaa44", HARD: "#ff4466" };
+
+  if (lb.length === 0) {
+    ctx.font = "12px 'Press Start 2P'";
+    ctx.fillStyle = "rgba(212,250,255,0.4)";
+    ctx.fillText("NO SCORES YET!", W/2, H/2 - 10);
+    ctx.font = "10px 'Press Start 2P'";
+    ctx.fillText("PLAY A GAME TO APPEAR HERE", W/2, H/2 + 14);
+  } else {
+    // Column headers
+    ctx.font = "5px 'Press Start 2P'";
+    ctx.fillStyle = "rgba(212,250,255,0.45)";
+    ctx.textAlign = "left";
+    ctx.fillText("#", 14, 62);
+    ctx.fillText("SCORE", 36, 62);
+    ctx.fillText("MODE", 110, 62);
+    ctx.fillText("DATE", 172, 62);
+
+    // Divider
+    ctx.strokeStyle = "rgba(255,255,255,0.1)";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(10, 67); ctx.lineTo(W-10, 67); ctx.stroke();
+
+    for (let i = 0; i < lb.length; i++) {
+      const e = lb[i];
+      const rowY = 82 + i * 38;
+      const col = rowColors[i] || "#4a4a77";
+
+      // Subtle row bg (alternating)
+      if (i % 2 === 0) {
+        ctx.fillStyle = "rgba(255,255,255,0.03)";
+        ctx.fillRect(8, rowY - 14, W - 16, 34);
+      }
+
+      // Rank number
+      ctx.font = "8px 'Press Start 2P'";
+      ctx.fillStyle = col;
+      ctx.textAlign = "left";
+      ctx.fillText(String(i + 1), 14, rowY);
+
+      // Score — big
+      ctx.font = "8px 'Press Start 2P'";
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(String(e.score), 36, rowY);
+
+      // Mode badge
+      const mc = modeColors[e.mode] || PAL.text;
+      ctx.fillStyle = mc + "33"; // translucent bg
+      ctx.fillRect(108, rowY - 11, 44, 14);
+      ctx.strokeStyle = mc;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(108, rowY - 11, 44, 14);
+      ctx.font = "5px 'Press Start 2P'";
+      ctx.fillStyle = mc;
+      ctx.textAlign = "center";
+      ctx.fillText(e.mode, 130, rowY);
+
+      // Date
+      ctx.font = "5px 'Press Start 2P'";
+      ctx.fillStyle = "rgba(212,250,255,0.55)";
+      ctx.textAlign = "left";
+      ctx.fillText(e.date || "", 172, rowY);
+
+      // Bottom micro divider
+      if (i < lb.length - 1) {
+        ctx.strokeStyle = "rgba(255,255,255,0.06)";
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(10, rowY + 16); ctx.lineTo(W-10, rowY + 16); ctx.stroke();
+      }
+    }
+  }
+
+  // Footer
+  ctx.fillStyle = "#16102a";
+  ctx.fillRect(0, H - 28, W, 28);
+  ctx.strokeStyle = "#f0c040";
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, H-28); ctx.lineTo(W, H-28); ctx.stroke();
+  if (blinkT < 30) {
+    ctx.font = "9px Orbitron, sans-serif";
+    ctx.fillStyle = PAL.accent;
+    ctx.textAlign = "center";
+    ctx.fillText("SPACE / ESC TO GO BACK", W/2, H - 10);
+  }
+  ctx.textAlign = "left";
+}
+
 
 // =========================
 // MAIN DRAW
@@ -2011,6 +2159,8 @@ function draw() {
     drawHowToPlay();
   } else if (state === "controls") {
     drawControls();
+  } else if (state === "leaderboard") {
+    drawLeaderboard();
   } else if (state === "title") {
     drawTitleScreen();
   } else if (state === "modeselect") {

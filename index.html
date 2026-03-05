@@ -6,14 +6,455 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
   <title>D0DZ</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* Bottom row of Hortensia Diamond — the bright fun ones */
+    :root {
+      --purple:  #bc8dff;
+      --pink:    #fc9bd3;
+      --lavender:#dabaff;
+      --ice:     #d4faff;
+      --dark:    #332b48;
+      --mid:     #3c4059;
+      --accent:  #00ff88;
+    }
+
+    body {
+      background: radial-gradient(ellipse at 50% 30%, #2a0a3e 0%, #0a0510 70%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Press Start 2P', monospace;
+      overflow-x: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      -ms-user-select: none;
+    }
+
+    /* =====================
+       GAMEBOY BODY
+       Main shell = bright purple #bc8dff
+       Gradients use pink + lavender
+    ===================== */
+    .gb {
+      width: 300px;
+      max-width: 90vw;
+      background: linear-gradient(160deg,
+        var(--lavender) 0%,
+        var(--purple)   35%,
+        #a070e8         65%,
+        #8850d0         100%
+      );
+      border-radius: 12px 12px 12px 40px;
+      padding: 18px 18px 24px;
+      position: relative;
+      box-shadow:
+        inset 0 4px 8px rgba(255,255,255,0.35),
+        inset 0 -4px 10px rgba(0,0,0,0.3),
+        0 0 0 2px var(--dark),
+        0 20px 70px rgba(188,141,255,0.8),
+        0 0 140px rgba(252,155,211,0.3);
+    }
+
+    /* Big top shine — lavender/ice shimmer */
+    .gb::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 50%;
+      background: linear-gradient(180deg,
+        rgba(212,250,255,0.22) 0%,
+        rgba(218,186,255,0.08) 50%,
+        transparent 100%
+      );
+      border-radius: 12px 12px 0 0;
+      pointer-events: none;
+    }
+
+    /* Bottom-left notch */
+    .gb::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0;
+      width: 60px; height: 60px;
+      background: radial-gradient(circle at 0% 100%,
+        transparent 40px,
+        #8850d0 40px
+      );
+      border-radius: 0 0 0 40px;
+      pointer-events: none;
+    }
+
+    /* Pink side accent stripe */
+    .gb-side-stripe {
+      position: absolute;
+      top: 20px; bottom: 20px; right: 0;
+      width: 6px;
+      background: linear-gradient(180deg,
+        transparent,
+        var(--pink) 30%,
+        var(--pink) 70%,
+        transparent
+      );
+      border-radius: 0 3px 3px 0;
+      opacity: 0.6;
+    }
+
+    /* =====================
+       SCREEN AREA
+       Bezel: dark #332b48
+    ===================== */
+    .gb-screen-area {
+      background: var(--dark);
+      border-radius: 8px 8px 4px 4px;
+      padding: 10px 10px 16px;
+      margin-bottom: 14px;
+      position: relative;
+      box-shadow:
+        inset 0 3px 10px rgba(0,0,0,0.9),
+        0 0 0 2px rgba(252,155,211,0.3);
+    }
+
+    .gb-brand {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      padding: 0 2px;
+    }
+
+    /* Brand in pink */
+    .gb-brand-text {
+      font-size: 6px;
+      color: var(--pink);
+      letter-spacing: 2px;
+      text-shadow: 0 0 8px rgba(252,155,211,0.8);
+    }
+
+    .gb-power {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 5px;
+      color: var(--lavender);
+      opacity: 0.7;
+    }
+
+    .gb-power-led {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent), 0 0 4px var(--accent);
+      animation: ledPulse 3.5s ease-in-out infinite;
+    }
+
+    @keyframes ledPulse {
+      0%, 100% { opacity: 1;   box-shadow: 0 0 10px var(--accent); }
+      50%       { opacity: 0.5; box-shadow: 0 0 3px var(--accent); }
+    }
+
+    /* Inner screen lip: mid dark */
+    .gb-screen-bezel {
+      background: var(--mid);
+      border-radius: 4px;
+      padding: 5px;
+      position: relative; /* needed for scanlines overlay */
+      box-shadow:
+        inset 0 2px 6px rgba(0,0,0,0.8),
+        0 0 0 1px rgba(188,141,255,0.2),
+        0 0 12px rgba(212,250,255,0.15);
+      overflow: hidden;
+    }
+
+    #game {
+      display: block;
+      width: 100% !important;
+      height: auto !important;
+      border-radius: 2px;
+      image-rendering: pixelated;
+    }
+
+    /* Scanlines overlay (retro screen feel) */
+    .scanlines {
+      position: absolute;
+      inset: 5px;            /* match bezel padding visually */
+      pointer-events: none;
+      border-radius: 2px;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(0,0,0,0.14),
+        rgba(0,0,0,0.14) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+      mix-blend-mode: multiply;
+      opacity: 0.55;
+    }
+
+    /* Speaker dots */
+    .gb-speaker {
+      position: absolute;
+      bottom: 5px; right: 12px;
+      display: grid;
+      grid-template-columns: repeat(4, 5px);
+      grid-template-rows: repeat(3, 5px);
+      gap: 3px;
+    }
+
+    .gb-speaker span {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.35);
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.6);
+    }
+
+    /* =====================
+       CONTROLS
+    ===================== */
+    .gb-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 4px;
+      margin-bottom: 16px;
+    }
+
+    /* D-PAD: lavender + purple */
+    .dpad {
+      width: 80px; height: 80px;
+      position: relative;
+    }
+
+    .dpad-arm {
+      position: absolute;
+      background: linear-gradient(145deg, var(--lavender), var(--purple));
+      box-shadow:
+        inset 0 2px 4px rgba(255,255,255,0.3),
+        0 3px 8px rgba(0,0,0,0.4),
+        0 0 0 1px rgba(0,0,0,0.2);
+    }
+
+    .dpad-h {
+      width: 100%; height: 34%;
+      top: 33%; left: 0;
+      border-radius: 4px;
+    }
+
+    .dpad-v {
+      width: 34%; height: 100%;
+      top: 0; left: 33%;
+      border-radius: 4px;
+    }
+
+    .dpad-center {
+      position: absolute;
+      width: 34%; height: 34%;
+      top: 33%; left: 33%;
+      background: var(--purple);
+      border-radius: 3px;
+      z-index: 2;
+    }
+
+    .dpad-h::before, .dpad-h::after,
+    .dpad-v::before, .dpad-v::after {
+      content: '';
+      position: absolute;
+      border: 5px solid transparent;
+    }
+    .dpad-h::before { border-right-color: rgba(255,255,255,0.6); left: 5px;   top: 50%; transform: translateY(-50%); }
+    .dpad-h::after  { border-left-color:  rgba(255,255,255,0.6); right: 5px;  top: 50%; transform: translateY(-50%); }
+    .dpad-v::before { border-bottom-color: rgba(255,255,255,0.6); top: 5px;    left: 50%; transform: translateX(-50%); }
+    .dpad-v::after  { border-top-color:    rgba(255,255,255,0.6); bottom: 5px; left: 50%; transform: translateX(-50%); }
+
+    /* A/B BUTTONS: pink face, purple glow */
+    .ab-buttons {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      transform: rotate(-20deg);
+      margin-right: 6px;
+    }
+
+    .ab-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn-ab {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%,
+        var(--ice)  0%,
+        var(--pink) 50%,
+        #e070b0     100%
+      );
+      box-shadow:
+        inset 0 2px 5px rgba(255,255,255,0.5),
+        inset 0 -2px 4px rgba(0,0,0,0.2),
+        0 4px 12px rgba(0,0,0,0.4),
+        0 0 16px rgba(252,155,211,0.6),
+        0 0 30px rgba(188,141,255,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      color: var(--dark);
+      cursor: pointer;
+      transition: transform 0.07s, box-shadow 0.07s;
+    }
+
+    .btn-ab:active {
+      transform: scale(0.9);
+      box-shadow:
+        inset 0 3px 6px rgba(0,0,0,0.3),
+        0 1px 4px rgba(0,0,0,0.4);
+    }
+
+    .btn-label {
+      font-size: 6px;
+      color: var(--ice);
+      opacity: 0.7;
+      transform: rotate(20deg);
+    }
+
+    /* START / SELECT: lavender pills */
+    .gb-mid {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      margin-bottom: 14px;
+    }
+
+    .btn-small-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-pill {
+      width: 36px; height: 10px;
+      border-radius: 5px;
+      background: linear-gradient(180deg, var(--lavender), var(--purple));
+      box-shadow:
+        inset 0 2px 3px rgba(255,255,255,0.4),
+        0 2px 6px rgba(0,0,0,0.3),
+        0 0 8px rgba(218,186,255,0.4);
+      cursor: pointer;
+      transition: transform 0.07s;
+    }
+
+    .btn-pill:active { transform: scaleY(0.85); }
+
+    .btn-pill-label {
+      font-size: 5px;
+      color: var(--ice);
+      opacity: 0.6;
+      letter-spacing: 1px;
+    }
+
+    /* Pink + lavender decorative stripe across bottom */
+    .gb-stripe {
+      position: absolute;
+      bottom: 30px; left: 18px; right: 18px;
+      height: 3px;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        var(--pink)    20%,
+        var(--lavender) 50%,
+        var(--pink)    80%,
+        transparent 100%
+      );
+      opacity: 0.55;
+      border-radius: 2px;
+    }
+
+    .gb-bottom {
+      display: flex;
+      justify-content: center;
+      padding-bottom: 4px;
+    }
+
+    .gb-phones {
+      font-size: 5px;
+      color: var(--ice);
+      opacity: 0.35;
+      letter-spacing: 1px;
+    }
+
+  </style>
 </head>
 <body>
-  <main class="wrap">
-    <h1>D0DZ</h1>
-    <canvas id="game" width="320" height="480"></canvas>
-  </main>
+
+  <div class="gb">
+    <div class="gb-side-stripe"></div>
+
+    <!-- SCREEN -->
+    <div class="gb-screen-area">
+      <div class="gb-brand">
+        <span class="gb-brand-text">GAME BOY</span>
+        <div class="gb-power">
+          POWER <div class="gb-power-led"></div>
+        </div>
+      </div>
+
+      <div class="gb-screen-bezel">
+        <canvas id="game" width="320" height="480"></canvas>
+        <div class="scanlines" aria-hidden="true"></div>
+      </div>
+
+      <div class="gb-speaker">
+        <span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <!-- D-PAD + AB -->
+    <div class="gb-controls">
+      <div class="dpad">
+        <div class="dpad-arm dpad-h"></div>
+        <div class="dpad-arm dpad-v"></div>
+        <div class="dpad-center"></div>
+      </div>
+
+      <div class="ab-buttons">
+        <div class="ab-row">
+          <span class="btn-label">B</span>
+          <div class="btn-ab">B</div>
+        </div>
+        <div class="ab-row">
+          <span class="btn-label">A</span>
+          <div class="btn-ab">A</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- START / SELECT -->
+    <div class="gb-mid">
+      <div class="btn-small-group">
+        <div class="btn-pill"></div>
+        <span class="btn-pill-label">SELECT</span>
+      </div>
+      <div class="btn-small-group">
+        <div class="btn-pill"></div>
+        <span class="btn-pill-label">START</span>
+      </div>
+    </div>
+
+    <div class="gb-stripe"></div>
+
+    <div class="gb-bottom">
+      <span class="gb-phones">&#9426; HEADPHONES</span>
+    </div>
+
+  </div>
+
   <script src="game.js"></script>
 </body>
 </html>

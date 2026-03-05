@@ -315,7 +315,7 @@ function resetGame() {
 // =========================
 // BACK BUTTON
 // =========================
-const backBtn = { x: 12, y: 12, w: 112, h: 28 };
+const backBtn = { x: 16, y: 12, w: 90, h: 24 };
 
 canvas.addEventListener("click", (e) => {
   const rect = canvas.getBoundingClientRect();
@@ -671,7 +671,7 @@ function drawUI() {
   if (state === "loading") return;
 
   ctx.fillStyle = PAL.text;
-  ctx.font = "10px 'Press Start 2P'";
+  ctx.font = "8px 'Press Start 2P'";
   ctx.textAlign = "right";
   ctx.fillText(`BEST ${best}`, W - 12, 22);
   ctx.fillText(`SCORE ${score}`, W - 12, 44);
@@ -683,19 +683,15 @@ function drawBackButton() {
 
   const hovered = pointInRect(mouseX, mouseY, backBtn);
 
-  ctx.fillStyle = hovered ? "#bc8dff33" : "#00000055";
-  ctx.fillRect(backBtn.x, backBtn.y, backBtn.w, backBtn.h);
-
-  ctx.fillStyle = hovered ? PAL.border : PAL.text;
-  ctx.fillRect(backBtn.x, backBtn.y, backBtn.w, 2);
-  ctx.fillRect(backBtn.x, backBtn.y + backBtn.h - 2, backBtn.w, 2);
-  ctx.fillRect(backBtn.x, backBtn.y, 2, backBtn.h);
-  ctx.fillRect(backBtn.x + backBtn.w - 2, backBtn.y, 2, backBtn.h);
-
-  ctx.fillStyle = hovered ? PAL.border : PAL.text;
   ctx.font = "10px 'Press Start 2P'";
-  ctx.textAlign = "center";
-  ctx.fillText("BACK", backBtn.x + backBtn.w / 2, backBtn.y + 18);
+  ctx.textAlign = "left";
+
+  // Use palette color
+  ctx.fillStyle = hovered ? PAL.border : PAL.text;
+
+  // Pixel-style arrow + text
+  ctx.fillText("<< BACK", backBtn.x, backBtn.y + 18);
+
   ctx.textAlign = "left";
 
   canvas.style.cursor = hovered ? "pointer" : "default";
@@ -713,28 +709,37 @@ function drawTitleScreen() {
   ctx.fillStyle = PAL.text;
   ctx.textAlign = "center";
 
+  // ✅ Move the whole block down by changing this ONE number
+  const baseY = 140; // try 140–160
+
+  // Title
   ctx.font = "16px 'Press Start 2P'";
-  ctx.fillText("D0DZ", W / 2, 100);
+  ctx.fillText("DØDZ", W / 2, baseY);
 
+  // Body text
   ctx.font = "8px 'Press Start 2P'";
-  ctx.fillText("PIXIE HATES WATER!", W / 2, 148);
-  ctx.fillText("DODGE THE FALLING", W / 2, 172);
-  ctx.fillText("RAINDROPS", W / 2, 196);
-  ctx.fillText("KEYS:  LEFT  RIGHT", W / 2, 234);
+  ctx.fillText("PIXIE HATES WATER!", W / 2, baseY + 48);
+  ctx.fillText("HELP HER DODGE THE", W / 2, baseY + 72);
+  ctx.fillText("RAINDROPS", W / 2, baseY + 96);
+  ctx.fillText("KEYS:  ←  → ", W / 2, baseY + 134);
 
+  // High score
   ctx.fillStyle = PAL.border;
-  ctx.fillText(`HIGH SCORE: ${best}`, W / 2, 268);
+  ctx.fillText(`HIGH SCORE: ${best}`, W / 2, baseY + 168);
 
+  // Start prompt
   if (blinkT < 30) {
     ctx.fillStyle = PAL.accent;
-    ctx.fillText("PRESS SPACE TO START", W / 2, 308);
+    ctx.fillText("PRESS SPACE TO START", W / 2, baseY + 208);
   }
 
+  // Sitting cat (keep “a lil under press space”)
   const catX = Math.floor(W / 2 - DRAW_W / 2);
+  const catY = baseY + 232;
   ctx.drawImage(
     sitImg,
     titleFrame * FRAME_W, 0, FRAME_W, FRAME_H,
-    catX, 336, DRAW_W, DRAW_H
+    catX, catY, DRAW_W, DRAW_H
   );
 
   ctx.textAlign = "left";
@@ -750,23 +755,21 @@ function drawGameOver() {
   const cx = W / 2;
   const cy = H / 2;
 
-  ctx.font = "14px 'Press Start 2P'";
-  ctx.fillText("GAME OVER", cx, cy - 30);
+  ctx.font = "16px 'Press Start 2P'";
+  ctx.fillText("D0DZ", W / 2, 130);
 
-  ctx.font = "10px 'Press Start 2P'";
-  ctx.fillText(`SCORE ${score}`, cx, cy + 14);
-  ctx.fillText(`BEST ${best}`, cx, cy + 44);
+  ctx.font = "8px 'Press Start 2P'";
+  ctx.fillText("PIXIE HATES WATER!", W / 2, 178);
+  ctx.fillText("HELP HER DODGE THE", W / 2, 202);
+  ctx.fillText("RAINDROPS", W / 2, 226);
+  ctx.fillText("KEYS:  ←  → ", W / 2, 264);
 
-  if (score >= best && score > 0 && blinkT < 30) {
-    ctx.fillStyle = PAL.accent;
-    ctx.font = "8px 'Press Start 2P'";
-    ctx.fillText("NEW BEST!", cx, cy + 70);
-  }
+  ctx.fillStyle = PAL.border;
+  ctx.fillText(`HIGH SCORE: ${best}`, W / 2, 298);
 
-  ctx.fillStyle = PAL.text;
   if (blinkT < 30) {
-    ctx.font = "9px 'Press Start 2P'";
-    ctx.fillText("SPACE TO RESTART", cx, cy + 100);
+    ctx.fillStyle = PAL.accent;
+    ctx.fillText("PRESS SPACE TO START", W / 2, 338);
   }
 
   ctx.textAlign = "left";

@@ -167,8 +167,8 @@ const ACHIEVEMENTS = [
   { id: "score_50",      icon: "🌟", name: "STAR PLAYER",   desc: "Score 70 in one game",           check: (s,d,m,g) => s >= 70 },
   { id: "score_100",     icon: "⚡", name: "STORM MASTER",  desc: "Reach a score of 150",           check: (s,d,m,g) => s >= 150 },
   { id: "score_150",     icon: "👑", name: "LEGENDARY",     desc: "Reach a score of 300",           check: (s,d,m,g) => s >= 300 },
-  { id: "hard_mode",     icon: "💀", name: "DAREDEVIL",     desc: "Score 80+ on Hard mode",         check: (s,d,m,g) => m === 2 && s >= 80 },
-  { id: "hard_25",       icon: "🔥", name: "FIRE KITTY",    desc: "Score 25+ on Hard mode",         check: (s,d,m,g) => m === 2 && s >= 25 },
+  { id: "hard_mode",     icon: "💀", name: "DAREDEVIL",     desc: "Score 80 on Hard mode",         check: (s,d,m,g) => m === 2 && s == 80 },
+  { id: "hard_25",       icon: "🔥", name: "FIRE KITTY",    desc: "Score 25 on Hard mode",         check: (s,d,m,g) => m === 2 && s == 25 },
   { id: "games_10",      icon: "🏆", name: "DEDICATED",     desc: "Play 15 games total",            check: (s,d,m,g) => g >= 15 },
 ];
 

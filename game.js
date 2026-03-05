@@ -160,16 +160,16 @@ function saveToLeaderboard(sc, mode) {
 // ACHIEVEMENT SYSTEM
 // =========================
 const ACHIEVEMENTS = [
-  { id: "first_game",    icon: "🎮", name: "FIRST STEPS",   desc: "Play your first game",        check: (s,d,m,g) => g >= 1 },
-  { id: "rain_survivor", icon: "🌧", name: "RAIN SURVIVOR", desc: "Survive 30 seconds",          check: (s,d,m,g) => d >= 1800 },
-  { id: "dodger",        icon: "💧", name: "DODGER",        desc: "Score 50 in one game",        check: (s,d,m,g) => s >= 50 },
-  { id: "score_25",      icon: "⭐", name: "GETTING GOOD",  desc: "Reach a score of 25",         check: (s,d,m,g) => s >= 25 },
-  { id: "score_50",      icon: "🌟", name: "STAR PLAYER",   desc: "Reach a score of 50",         check: (s,d,m,g) => s >= 50 },
-  { id: "score_100",     icon: "⚡", name: "STORM MASTER",  desc: "Reach a score of 100",        check: (s,d,m,g) => s >= 100 },
-  { id: "score_150",     icon: "👑", name: "LEGENDARY",     desc: "Reach a score of 150",        check: (s,d,m,g) => s >= 150 },
-  { id: "hard_mode",     icon: "💀", name: "DAREDEVIL",     desc: "Finish a game on Hard",       check: (s,d,m,g) => m === 2 },
-  { id: "hard_25",       icon: "🔥", name: "FIRE KITTY",    desc: "Score 25+ on Hard mode",      check: (s,d,m,g) => m === 2 && s >= 25 },
-  { id: "games_10",      icon: "🏆", name: "DEDICATED",     desc: "Play 10 games total",         check: (s,d,m,g) => g >= 10 },
+  { id: "first_game",    icon: "🎮", name: "FIRST STEPS",   desc: "Play your first game",           check: (s,d,m,g) => g >= 1 },
+  { id: "rain_survivor", icon: "🌧", name: "RAIN SURVIVOR", desc: "Survive 30 seconds",             check: (s,d,m,g) => d >= 1800 },
+  { id: "dodger",        icon: "💧", name: "DODGER",        desc: "Score 50 in one game",           check: (s,d,m,g) => s >= 50 },
+  { id: "score_25",      icon: "⭐", name: "GETTING GOOD",  desc: "Score 30 on Medium mode",        check: (s,d,m,g) => m === 1 && s >= 30 },
+  { id: "score_50",      icon: "🌟", name: "STAR PLAYER",   desc: "Score 70 in one game",           check: (s,d,m,g) => s >= 70 },
+  { id: "score_100",     icon: "⚡", name: "STORM MASTER",  desc: "Reach a score of 150",           check: (s,d,m,g) => s >= 150 },
+  { id: "score_150",     icon: "👑", name: "LEGENDARY",     desc: "Reach a score of 300",           check: (s,d,m,g) => s >= 300 },
+  { id: "hard_mode",     icon: "💀", name: "DAREDEVIL",     desc: "Score 80+ on Hard mode",         check: (s,d,m,g) => m === 2 && s >= 80 },
+  { id: "hard_25",       icon: "🔥", name: "FIRE KITTY",    desc: "Score 25+ on Hard mode",         check: (s,d,m,g) => m === 2 && s >= 25 },
+  { id: "games_10",      icon: "🏆", name: "DEDICATED",     desc: "Play 15 games total",            check: (s,d,m,g) => g >= 15 },
 ];
 
 function loadAchievements() {
@@ -2272,9 +2272,19 @@ function drawAchievementsScreen() {
   ctx.fillStyle = achPage === 1 ? "#f0c040" : "rgba(240,192,64,0.3)";
   ctx.beginPath(); ctx.arc(W - 12, 22, 4, 0, Math.PI*2); ctx.fill();
 
+  // Sort: unlocked first (most recently unlocked at top), then locked
+  const sortedAch = [...ACHIEVEMENTS].sort((a, b) => {
+    const aU = ach[a.id] ? ach[a.id].unlockedAt || 0 : null;
+    const bU = ach[b.id] ? ach[b.id].unlockedAt || 0 : null;
+    if (aU !== null && bU !== null) return bU - aU; // both unlocked: most recent first
+    if (aU !== null) return -1; // a unlocked, b not
+    if (bU !== null) return 1;  // b unlocked, a not
+    return 0; // both locked: keep original order
+  });
+
   // Slice for current page
   const pageStart = achPage * ACH_PER_PAGE;
-  const pageItems = ACHIEVEMENTS.slice(pageStart, pageStart + ACH_PER_PAGE);
+  const pageItems = sortedAch.slice(pageStart, pageStart + ACH_PER_PAGE);
 
   const startY = 62;
   const rowH = 76;

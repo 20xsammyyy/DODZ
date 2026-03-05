@@ -2162,7 +2162,7 @@ function drawLeaderboard() {
     ctx.fillText("PLAY A GAME TO APPEAR HERE", W/2, H/2 + 14);
   } else {
     // Column headers
-    ctx.font = "5px 'Press Start 2P'";
+    ctx.font = "6px 'Press Start 2P'";
     ctx.fillStyle = "rgba(212,250,255,0.45)";
     ctx.textAlign = "left";
     ctx.fillText("#", 14, 62);
@@ -2204,13 +2204,13 @@ function drawLeaderboard() {
       ctx.strokeStyle = mc;
       ctx.lineWidth = 1;
       ctx.strokeRect(108, rowY - 11, 44, 14);
-      ctx.font = "5px 'Press Start 2P'";
+      ctx.font = "9px Orbitron, sans-serif";
       ctx.fillStyle = mc;
       ctx.textAlign = "center";
       ctx.fillText(e.mode, 130, rowY);
 
       // Date
-      ctx.font = "5px 'Press Start 2P'";
+      ctx.font = "7px 'Press Start 2P'";
       ctx.fillStyle = "rgba(212,250,255,0.55)";
       ctx.textAlign = "left";
       ctx.fillText(e.date || "", 172, rowY);

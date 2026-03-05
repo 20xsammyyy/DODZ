@@ -538,6 +538,33 @@ function drawCityscape() {
   ctx.fillRect(0, 0, W, H);
 
   // Rain streaks
+  // Moon
+  const moonX = W * 0.75;
+  const moonY = 52;
+  const moonR = 18;
+
+  // Outer glow
+  const moonGlow = ctx.createRadialGradient(moonX, moonY, moonR * 0.5, moonX, moonY, moonR * 2.5);
+  moonGlow.addColorStop(0, "rgba(218,186,255,0.18)");
+  moonGlow.addColorStop(1, "rgba(218,186,255,0)");
+  ctx.fillStyle = moonGlow;
+  ctx.beginPath();
+  ctx.arc(moonX, moonY, moonR * 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Moon body
+  ctx.fillStyle = "#dabaff";
+  ctx.beginPath();
+  ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Crescent shadow to make it a crescent moon
+  ctx.fillStyle = "#13112a";
+  ctx.beginPath();
+  ctx.arc(moonX + moonR * 0.45, moonY - moonR * 0.1, moonR * 0.82, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Rain streaks
   for (const s of RAIN_STREAKS) {
     ctx.save();
     ctx.globalAlpha = s.alpha;
@@ -749,11 +776,22 @@ function drawScanlines() {
 function drawUI() {
   if (state === "loading") return;
 
-  ctx.fillStyle = PAL.text;
   ctx.font = "8px 'Press Start 2P'";
-  ctx.textAlign = "right";
-  ctx.fillText(`BEST ${best}`, W - 12, 22);
-  ctx.fillText(`SCORE ${score}`, W - 12, 44);
+
+  // BEST stays top right — only during gameplay/gameover
+  if (state === "playing" || state === "gameover") {
+    ctx.fillStyle = PAL.text;
+    ctx.textAlign = "right";
+    ctx.fillText(`BEST: ${best}`, W - 12, 22);
+  }
+
+  // SCORE in the strip between ground and canvas bottom
+  if (state === "playing") {
+    ctx.fillStyle = PAL.accent;
+    ctx.textAlign = "right";
+    ctx.fillText(`SCORE: ${score}`, W - 12, H - 6);
+  }
+
   ctx.textAlign = "left";
 }
 
@@ -762,17 +800,12 @@ function drawBackButton() {
 
   const hovered = pointInRect(mouseX, mouseY, backBtn);
 
-  ctx.font = "10px 'Press Start 2P'";
+  ctx.font = "8px 'Press Start 2P'";
+  ctx.fillStyle = hovered ? PAL.border : "#8977c9";
   ctx.textAlign = "left";
-
-  // Use palette color
-  ctx.fillStyle = hovered ? PAL.border : PAL.text;
-
-  // Pixel-style arrow + text
   ctx.fillText("<< BACK", backBtn.x, backBtn.y + 18);
 
   ctx.textAlign = "left";
-
   canvas.style.cursor = hovered ? "pointer" : "default";
 }
 
@@ -825,30 +858,42 @@ function drawTitleScreen() {
 }
 
 function drawGameOver() {
-  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.fillStyle = "rgba(0,0,0,0.7)";
   ctx.fillRect(0, 0, W, H);
-
-  ctx.fillStyle = PAL.text;
-  ctx.textAlign = "center";
 
   const cx = W / 2;
   const cy = H / 2;
 
-  ctx.font = "16px 'Press Start 2P'";
-  ctx.fillText("D0DZ", W / 2, 130);
+  ctx.textAlign = "center";
 
+  // GAME OVER title
+  ctx.fillStyle = "#fc9bd3";
+  ctx.font = "20px 'Press Start 2P'";
+  ctx.fillText("GAME OVER", cx, cy - 80);
+
+  // Subtitle
+  ctx.fillStyle = PAL.text;
   ctx.font = "8px 'Press Start 2P'";
-  ctx.fillText("PIXIE HATES WATER!", W / 2, 178);
-  ctx.fillText("HELP HER DODGE THE", W / 2, 202);
-  ctx.fillText("RAINDROPS", W / 2, 226);
-  ctx.fillText("KEYS:  ←  → ", W / 2, 264);
+  ctx.fillText("PIXIE GOT WET!", cx, cy - 40);
 
+  // Score
+  ctx.fillStyle = PAL.text;
+  ctx.fillText(`SCORE: ${score}`, cx, cy);
+
+  // Best
   ctx.fillStyle = PAL.border;
-  ctx.fillText(`HIGH SCORE: ${best}`, W / 2, 298);
+  ctx.fillText(`BEST: ${best}`, cx, cy + 28);
 
+  // New best!
+  if (score === best && score > 0) {
+    ctx.fillStyle = PAL.accent;
+    ctx.fillText("NEW BEST!", cx, cy + 56);
+  }
+
+  // Restart prompt
   if (blinkT < 30) {
     ctx.fillStyle = PAL.accent;
-    ctx.fillText("PRESS SPACE TO START", W / 2, 338);
+    ctx.fillText("PRESS SPACE TO RETRY", cx, cy + 100);
   }
 
   ctx.textAlign = "left";

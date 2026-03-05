@@ -1308,9 +1308,9 @@ function drawModeSelect() {
   const modeBgs   = ["rgba(0,255,136,0.08)", "rgba(255,170,68,0.08)", "rgba(255,68,102,0.08)"];
   const modeBorders = ["#00ff88", "#ffaa44", "#ff4466"];
   const modeDescriptions = [
-    ["SLOW DROPS", "FEW ENEMIES"],
+    ["CALM", "FEW ENEMIES"],
     ["FASTER", "MORE DROPS"],
-    ["CHAOS!", "MAX SPEED"],
+    ["INSANE", "MAX SPEED"],
   ];
 
   for (let i = 0; i < 3; i++) {
@@ -1345,7 +1345,7 @@ function drawModeSelect() {
 
     // Description lines
     ctx.fillStyle = selected ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)";
-    ctx.font = FONT_UI;
+    ctx.font = "9px Orbitron, sans-serif";
     for (let l = 0; l < modeDescriptions[i].length; l++) {
       ctx.fillText(modeDescriptions[i][l], cx2, cardY + 70 + l * 14);
     }

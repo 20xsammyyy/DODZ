@@ -24,27 +24,6 @@ h1 {
   letter-spacing: 4px;
 }
 
-.gb-speaker {
-  position: absolute;
-  right: 36px;
-  bottom: 120px;
-
-  display: grid;
-  grid-template-columns: repeat(4, 5px);
-  grid-template-rows: repeat(3, 5px);
-  gap: 4px;
-
-  transform: rotate(-18deg);
-}
-
-.game-text {
-  font-family: 'VT323', monospace;
-  font-size: 16px;
-  line-height: 1.6;
-  letter-spacing: 1px;
-  color: var(--ice);
-}
-
 /* Single border only — removed the conflicting canvas rule */
 #game {
   display: block;

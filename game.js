@@ -136,6 +136,7 @@ let spawnTimer = 0;
 let score = 0;
 let best = Number(localStorage.getItem("dodz_best") || 0);
 let blinkT = 0;
+let titleMenuIndex = 0; // 0=start, 1=howtoplay, 2=controls
 
 // =========================
 // PLAYER ANIMATION
@@ -362,7 +363,7 @@ canvas.addEventListener("click", (e) => {
     const cardW2 = 82, cardH2 = 110, cardGap2 = 8;
     const totalW2 = 3 * cardW2 + 2 * cardGap2;
     const cardStartX2 = W / 2 - totalW2 / 2;
-    const cardY2 = 58;
+    const cardY2 = H / 2 - 110 / 2 - 10;
     for (let i = 0; i < 3; i++) {
       const cx3 = cardStartX2 + i * (cardW2 + cardGap2);
       if (pointInRect(mx, my, { x: cx3, y: cardY2, w: cardW2, h: cardH2 })) {
@@ -370,7 +371,7 @@ canvas.addEventListener("click", (e) => {
       }
     }
     // confirm button area
-    const confirmBtn = { x: W/2 - 80, y: cardY2 + cardH2 + 30, w: 160, h: 28 };
+    const confirmBtn = { x: W/2 - 80, y: H / 2 + 110 / 2 + 20, w: 160, h: 28 };
     if (pointInRect(mx, my, confirmBtn)) {
       unlockSound();
       playSfx(SFX.start);
@@ -406,9 +407,17 @@ addEventListener("keydown", (e) => {
 
   if (e.key === " " || e.code === "Space") {
     unlockSound();
-    if (state === "title" || state === "gameover") {
-      state = "modeselect";
-      selectedMode = 0;
+    if (state === "howtoplay" || state === "controls") {
+      state = "title"; blinkT = 0;
+    } else if (state === "title" || state === "gameover") {
+      if (titleMenuIndex === 0) {
+        state = "modeselect";
+        selectedMode = 0;
+      } else if (titleMenuIndex === 1) {
+        state = "howtoplay";
+      } else if (titleMenuIndex === 2) {
+        state = "controls";
+      }
     } else if (state === "modeselect") {
       playSfx(SFX.start);
       startLoading();
@@ -418,6 +427,13 @@ addEventListener("keydown", (e) => {
   if (state === "modeselect") {
     if (e.key === "ArrowLeft")  selectedMode = (selectedMode + 2) % 3;
     if (e.key === "ArrowRight") selectedMode = (selectedMode + 1) % 3;
+  }
+  if (state === "title") {
+    if (e.key === "ArrowUp")   titleMenuIndex = (titleMenuIndex + 2) % 3;
+    if (e.key === "ArrowDown") titleMenuIndex = (titleMenuIndex + 1) % 3;
+  }
+  if ((state === "howtoplay" || state === "controls") && e.key === "Escape") {
+    state = "title"; blinkT = 0;
   }
 });
 
@@ -501,7 +517,7 @@ function drawParticles() {
 function update() {
   blinkT = (blinkT + 1) % 60;
 
-  if (state === "title") {
+  if (state === "title" || state === "howtoplay" || state === "controls") {
     titleFrameTimer++;
     if (titleFrameTimer >= 10) {
       titleFrameTimer = 0;
@@ -537,6 +553,7 @@ function update() {
   if (state === "playing") {
     updateRainStreaks();
     updateCars();
+    updatePetals();
     if (selectedMode === 2) updateLightning();
   }
 
@@ -607,14 +624,263 @@ function update() {
 // =========================
 // DRAW — BACKGROUNDS BY MODE
 // =========================
-function drawBgEasy() {
-  // Night city — existing cityscape (unchanged)
-  drawCityscape();
+// =========================
+// EASY MODE — RAINY JAPANESE TRAIN STATION
+// =========================
+let petalParticles = []; // reused as rain puddle ripples
+let petalSpawnT = 0;
+
+// Puddle ripples
+let ripples = [];
+let rippleSpawnT = 0;
+let trainOffset = 0;
+
+function spawnRipple() {
+  ripples.push({
+    x: rand(10, W - 10),
+    y: BUILDING_BASE + rand(4, 14),
+    r: 0,
+    maxR: 6 + Math.random() * 5,
+    alpha: 0.5,
+  });
 }
 
-// =========================
-// MEDIUM MODE — STREET CARS
-// =========================
+function updatePetals() {
+  if (selectedMode !== 0) return;
+  rippleSpawnT++;
+  if (rippleSpawnT >= 12) { rippleSpawnT = 0; spawnRipple(); }
+  for (const r of ripples) {
+    r.r += 0.3;
+    r.alpha -= 0.018;
+  }
+  ripples = ripples.filter(r => r.alpha > 0);
+  trainOffset = (trainOffset + 0.8) % 312; // 4 cars x 78px
+}
+
+function drawBgEasy() {
+  // Sky
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, "#0a0e18");
+  sky.addColorStop(0.5, "#111828");
+  sky.addColorStop(1,   "#1a2030");
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+
+  // Rain streaks — drawn early so station is on top
+  for (const s of RAIN_STREAKS) {
+    ctx.save();
+    ctx.globalAlpha = s.alpha * 1.1;
+    ctx.strokeStyle = "#8ab0cc";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.lineTo(s.x - 1, s.y + s.len * 1.3);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // === STATION BUILDING — brick Japanese station facade ===
+  const stationTop = BUILDING_BASE - 140;
+  const beamPositions = [W*0.15, W*0.38, W*0.62, W*0.85];
+
+  // Main brick wall — warm dark terracotta
+  ctx.fillStyle = "#2a1e18";
+  ctx.fillRect(0, stationTop, W, BUILDING_BASE - stationTop);
+
+  // Brick texture rows
+  for (let row = 0; row < 9; row++) {
+    const by = stationTop + 6 + row * 14;
+    const offset = (row % 2) * 10;
+    ctx.fillStyle = row % 2 === 0 ? "#321e16" : "#2e1c14";
+    for (let col = -1; col < 22; col++) {
+      ctx.fillRect((col * 14 + offset)|0, by|0, 12, 11);
+    }
+    // Mortar line
+    ctx.fillStyle = "#1e1410";
+    ctx.fillRect(0, (by + 11)|0, W, 3);
+  }
+
+  // Peaked roofline — centre gable higher
+  ctx.fillStyle = "#1a1008";
+  // Left wing
+  ctx.beginPath();
+  ctx.moveTo(0, stationTop);
+  ctx.lineTo(W*0.28, stationTop);
+  ctx.lineTo(W*0.28, stationTop - 8);
+  ctx.lineTo(0, stationTop - 4);
+  ctx.closePath();
+  ctx.fill();
+  // Centre gable
+  ctx.beginPath();
+  ctx.moveTo(W*0.28, stationTop);
+  ctx.lineTo(W*0.72, stationTop);
+  ctx.lineTo(W*0.72, stationTop - 8);
+  ctx.lineTo(W*0.5, stationTop - 22);
+  ctx.lineTo(W*0.28, stationTop - 8);
+  ctx.closePath();
+  ctx.fill();
+  // Right wing
+  ctx.beginPath();
+  ctx.moveTo(W*0.72, stationTop);
+  ctx.lineTo(W, stationTop);
+  ctx.lineTo(W, stationTop - 4);
+  ctx.lineTo(W*0.72, stationTop - 8);
+  ctx.closePath();
+  ctx.fill();
+  // Roof edge trim
+  ctx.strokeStyle = "#3a2010";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, stationTop - 4);
+  ctx.lineTo(W*0.28, stationTop - 8);
+  ctx.lineTo(W*0.5, stationTop - 22);
+  ctx.lineTo(W*0.72, stationTop - 8);
+  ctx.lineTo(W, stationTop - 4);
+  ctx.stroke();
+
+  // Station name sign — hung below gable
+  ctx.fillStyle = "#0a2010";
+  ctx.fillRect(W/2 - 52, stationTop - 2, 104, 14);
+  ctx.strokeStyle = "#1a6030";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(W/2 - 52, stationTop - 2, 104, 14);
+  // Kanji-style white blocks
+  ctx.fillStyle = "#e8f8e8";
+  for (let k = 0; k < 5; k++) {
+    ctx.fillRect(W/2 - 36 + k*16, stationTop + 1, 10, 8);
+  }
+
+  // Arched windows — tall with rounded tops (the key visual difference from the flat train)
+  const archWindows = [
+    { x: W*0.05, w: 28 }, { x: W*0.22, w: 28 }, { x: W*0.38, w: 28 },
+    { x: W*0.55, w: 28 }, { x: W*0.72, w: 28 }, { x: W*0.88, w: 24 },
+  ];
+  for (const aw of archWindows) {
+    const awY = stationTop + 18;
+    const awH = 48;
+    const awX = aw.x - aw.w/2;
+    const archR = aw.w/2;
+
+    // Warm interior glow
+    const wg = ctx.createRadialGradient(aw.x, awY + awH*0.6, 2, aw.x, awY + awH*0.6, aw.w);
+    wg.addColorStop(0, "rgba(255,200,120,0.35)");
+    wg.addColorStop(1, "rgba(255,140,60,0)");
+    ctx.fillStyle = wg;
+    ctx.fillRect((awX-8)|0, (awY-4)|0, aw.w+16, awH+8);
+
+    // Arch fill (warm amber glass)
+    ctx.fillStyle = "rgba(255,185,80,0.55)";
+    ctx.beginPath();
+    ctx.moveTo(awX|0, (awY+awH)|0);
+    ctx.lineTo(awX|0, (awY+archR)|0);
+    ctx.arc(aw.x, awY+archR, archR, Math.PI, 0);
+    ctx.lineTo((awX+aw.w)|0, (awY+awH)|0);
+    ctx.closePath();
+    ctx.fill();
+
+    // Arch frame
+    ctx.strokeStyle = "#3a2010";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(awX|0, (awY+awH)|0);
+    ctx.lineTo(awX|0, (awY+archR)|0);
+    ctx.arc(aw.x, awY+archR, archR, Math.PI, 0);
+    ctx.lineTo((awX+aw.w)|0, (awY+awH)|0);
+    ctx.stroke();
+
+    // Window divider (cross)
+    ctx.strokeStyle = "#3a2010";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(aw.x|0, awY|0);
+    ctx.lineTo(aw.x|0, (awY+awH)|0);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(awX|0, (awY+awH*0.55)|0);
+    ctx.lineTo((awX+aw.w)|0, (awY+awH*0.55)|0);
+    ctx.stroke();
+  }
+
+  // Horizontal stone band between arch tops and roof
+  ctx.fillStyle = "#3a2818";
+  ctx.fillRect(0, stationTop + 4, W, 8);
+
+  // Canopy overhang (front awning above train area)
+  ctx.fillStyle = "#1a1008";
+  ctx.fillRect(0, stationTop + 88, W, 8);
+  ctx.strokeStyle = "#3a2010";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, stationTop + 96);
+  ctx.lineTo(W, stationTop + 96);
+  ctx.stroke();
+
+  // Moving train — behind the yellow line, above platform floor
+  const trainY = stationTop + 92;
+  const trainH = 36;
+  ctx.fillStyle = "#080c14";
+  ctx.fillRect(0, trainY, W, trainH);
+  for (let i = -1; i < 6; i++) {
+    const tx = ((i * 78) - (trainOffset % 78) + 78) % (78 * 5) - 78;
+    ctx.fillStyle = "#2a3a5a";
+    ctx.fillRect(tx|0, trainY + 1, 74, trainH - 2);
+    ctx.fillStyle = "rgba(255,210,130,0.4)";
+    for (let j = 0; j < 4; j++) {
+      ctx.fillRect((tx + 5 + j * 17)|0, trainY + 6, 12, 12);
+    }
+    ctx.fillStyle = "#1a3a8a";
+    ctx.fillRect(tx|0, (trainY + trainH * 0.6)|0, 74, 5);
+    ctx.fillStyle = "#0e1220";
+    ctx.fillRect((tx + 73)|0, trainY, 5, trainH);
+  }
+
+  // Overhead lights
+  for (const bx of beamPositions) {
+    const lg = ctx.createRadialGradient(bx, stationTop + 10, 1, bx, stationTop + 10, 38);
+    lg.addColorStop(0, "rgba(255,220,140,0.28)");
+    lg.addColorStop(1, "rgba(255,180,80,0)");
+    ctx.fillStyle = lg;
+    ctx.beginPath();
+    ctx.arc(bx, stationTop + 10, 38, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = "#e8d080";
+    ctx.fillRect((bx - 4)|0, (stationTop + 8)|0, 8, 4);
+  }
+
+  // Yellow safety line on platform edge
+  ctx.fillStyle = "#c8a800";
+  ctx.fillRect(0, BUILDING_BASE - 5, W, 4);
+  ctx.fillStyle = "#e8c400";
+  for (let i = 4; i < W; i += 8) ctx.fillRect(i, BUILDING_BASE - 5, 3, 3);
+
+  // Platform floor — BELOW BUILDING_BASE, where player walks
+  const ground = ctx.createLinearGradient(0, BUILDING_BASE, 0, H);
+  ground.addColorStop(0, "#1e2230");
+  ground.addColorStop(1, "#161a24");
+  ctx.fillStyle = ground;
+  ctx.fillRect(0, BUILDING_BASE, W, H - BUILDING_BASE);
+
+  // Wet reflections of lights on platform
+  ctx.globalAlpha = 0.07;
+  for (const bx of beamPositions) {
+    ctx.fillStyle = "#ffdd88";
+    ctx.fillRect((bx - 14)|0, BUILDING_BASE, 28, H - BUILDING_BASE);
+  }
+  ctx.globalAlpha = 1;
+
+  // Puddle ripples
+  for (const r of ripples) {
+    ctx.strokeStyle = "#6a8aaa";
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = r.alpha;
+    ctx.beginPath();
+    ctx.ellipse(r.x|0, r.y|0, r.r, r.r * 0.4, 0, 0, Math.PI*2);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+
 let cars = [];
 let carSpawnT = 0;
 
@@ -1009,7 +1275,7 @@ function drawBgHard() {
 // =========================
 function drawModeSelect() {
   // Background preview of selected mode
-  if (selectedMode === 0) drawCityscape();
+  if (selectedMode === 0) drawBgEasy();
   else if (selectedMode === 1) drawBgMedium();
   else drawBgHard();
 
@@ -1023,7 +1289,7 @@ function drawModeSelect() {
   ctx.textAlign = "center";
   ctx.fillStyle = PAL.accent;
   ctx.font = "10px 'Press Start 2P'";
-  ctx.fillText("SELECT MODE", cx, 38);
+  ctx.fillText("SELECT MODE", cx, H / 2 - 110 / 2 - 28);
 
   // Mode cards
   const cardW = 82;
@@ -1031,7 +1297,7 @@ function drawModeSelect() {
   const cardGap = 8;
   const totalW = 3 * cardW + 2 * cardGap;
   const cardStartX = cx - totalW / 2;
-  const cardY = 58;
+  const cardY = H / 2 - cardH / 2 - 10;
 
   const modeColors = ["#00ff88", "#ffaa44", "#ff4466"];
   const modeBgs   = ["rgba(0,255,136,0.08)", "rgba(255,170,68,0.08)", "rgba(255,68,102,0.08)"];
@@ -1047,8 +1313,8 @@ function drawModeSelect() {
     const cx2 = cardStartX + i * (cardW + cardGap) + cardW / 2;
     const selected = i === selectedMode;
 
-    // Card bg
-    ctx.fillStyle = selected ? modeBgs[i] : "rgba(0,0,0,0.3)";
+    // Card bg — always same dark fill
+    ctx.fillStyle = "rgba(0,0,0,0.3)";
     ctx.fillRect(cardStartX + i * (cardW + cardGap), cardY, cardW, cardH);
 
     // Card border
@@ -1079,11 +1345,11 @@ function drawModeSelect() {
       ctx.fillText(modeDescriptions[i][l], cx2, cardY + 70 + l * 14);
     }
 
-    // Selected indicator arrow
+    // Selected indicator — small triangle above card
     if (selected) {
       ctx.fillStyle = modeColors[i];
       ctx.font = "8px 'Press Start 2P'";
-      ctx.fillText("▼", cx2, cardY + cardH + 14);
+      ctx.fillText("▲", cx2, cardY - 4);
     }
   }
 
@@ -1092,13 +1358,13 @@ function drawModeSelect() {
   if (blinkT < 30) {
     ctx.fillStyle = modeColors[selectedMode];
     ctx.font = "7px 'Press Start 2P'";
-    ctx.fillText("PRESS SPACE TO PLAY", cx, H * 0.82);
+    ctx.fillText("PRESS SPACE TO PLAY", cx, H / 2 + 110 / 2 + 30);
   }
 
   // Nav hint
   ctx.fillStyle = "rgba(255,255,255,0.3)";
   ctx.font = "5px 'Press Start 2P'";
-  ctx.fillText("← → TO BROWSE", cx, H * 0.88);
+  ctx.fillText("← → TO BROWSE", cx, H / 2 + 110 / 2 + 48);
 
   ctx.textAlign = "left";
 }
@@ -1323,10 +1589,6 @@ function drawPlayer() {
   const drawX = Math.floor(player.x - (DRAW_W - player.w) / 2);
   const drawY = Math.floor(feetY - DRAW_H);
 
-  // Shadow under feet
-  ctx.fillStyle = "rgba(0,0,0,0.3)";
-  ctx.fillRect(drawX + DRAW_W / 4, GROUND_Y - 2, DRAW_W / 2, 3);
-
   ctx.drawImage(
     sprite,
     frame * FRAME_W, 0, FRAME_W, FRAME_H,
@@ -1391,53 +1653,267 @@ function drawBackButton() {
 // DRAW — SCREENS
 // =========================
 function drawTitleScreen() {
-  ctx.fillStyle = PAL.field;
+  // === SKY — dusk purple/blue gradient ===
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0,    "#1a0e30");
+  sky.addColorStop(0.35, "#2a1848");
+  sky.addColorStop(0.65, "#4a2258");
+  sky.addColorStop(1,    "#6a2a40");
+  ctx.fillStyle = sky;
   ctx.fillRect(0, 0, W, H);
 
-  drawBgEnemies();
+  // Stars
+  const t = Date.now() * 0.0004;
+  for (let i = 0; i < 30; i++) {
+    const sx = ((i * 137.5) % W);
+    const sy = ((i * 61.3) % (H * 0.45));
+    const tw = (Math.sin(t + i * 1.9) * 0.5 + 0.5) * 0.7 + 0.1;
+    ctx.globalAlpha = tw;
+    ctx.fillStyle = "#fffbe8";
+    ctx.fillRect(sx|0, sy|0, 1, 1);
+  }
+  ctx.globalAlpha = 1;
 
-  ctx.fillStyle = PAL.text;
-  ctx.textAlign = "center";
+  // Moon
+  const moonX = W * 0.8, moonY = 55, moonR = 16;
+  const moonGlow = ctx.createRadialGradient(moonX, moonY, 2, moonX, moonY, moonR * 2.5);
+  moonGlow.addColorStop(0, "rgba(220,200,255,0.3)");
+  moonGlow.addColorStop(1, "rgba(180,140,255,0)");
+  ctx.fillStyle = moonGlow;
+  ctx.beginPath(); ctx.arc(moonX, moonY, moonR * 2.5, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = "#ddc8ff";
+  ctx.beginPath(); ctx.arc(moonX, moonY, moonR, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = "#2a1848";
+  ctx.beginPath(); ctx.arc(moonX + moonR*0.4, moonY - moonR*0.1, moonR*0.8, 0, Math.PI*2); ctx.fill();
 
-  // ✅ Move the whole block down by changing this ONE number
-  const baseY = 140; // try 140–160
+  // Far background hills — dark silhouette
+  ctx.fillStyle = "#180e28";
+  ctx.beginPath();
+  ctx.moveTo(0, H * 0.62);
+  ctx.bezierCurveTo(W*0.1, H*0.48, W*0.2, H*0.52, W*0.35, H*0.50);
+  ctx.bezierCurveTo(W*0.45, H*0.48, W*0.55, H*0.56, W*0.65, H*0.50);
+  ctx.bezierCurveTo(W*0.78, H*0.44, W*0.88, H*0.52, W, H*0.55);
+  ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
 
-  // Title
-  ctx.font = "16px 'Press Start 2P'";
-  ctx.fillStyle = PAL.accent;
-  ctx.fillText("DØDZ", W / 2, baseY);
-  ctx.fillStyle = PAL.text;
+  // Mid hills
+  ctx.fillStyle = "#120a1e";
+  ctx.beginPath();
+  ctx.moveTo(0, H * 0.72);
+  ctx.bezierCurveTo(W*0.15, H*0.60, W*0.28, H*0.65, W*0.42, H*0.60);
+  ctx.bezierCurveTo(W*0.55, H*0.55, W*0.68, H*0.63, W*0.82, H*0.60);
+  ctx.bezierCurveTo(W*0.92, H*0.57, W*0.97, H*0.63, W, H*0.65);
+  ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
 
-  // Body text
-  ctx.font = "8px 'Press Start 2P'";
-  ctx.fillText("PIXIE HATES WATER!", W / 2, baseY + 48);
-  ctx.fillText("HELP HER DODGE THE", W / 2, baseY + 72);
-  ctx.fillText("RAINDROPS", W / 2, baseY + 96);
-  ctx.fillText("KEYS:  ←  → ", W / 2, baseY + 134);
-
-  // High score
-  ctx.fillStyle = PAL.border;
-  ctx.fillText(`HIGH SCORE: ${best}`, W / 2, baseY + 168);
-
-  // Start prompt
-  if (blinkT < 30) {
-    ctx.fillStyle = PAL.accent;
-    ctx.font = "8px 'Press Start 2P'";
-    ctx.fillText("PRESS SPACE TO START", W / 2, baseY + 208);
+  // Trees on hills — small pixel pines
+  const treeLine = H * 0.62;
+  const treeData = [[W*0.05,treeLine],[W*0.12,treeLine-8],[W*0.19,treeLine+2],[W*0.55,treeLine-4],[W*0.62,treeLine-10],[W*0.68,treeLine+2],[W*0.88,treeLine-6],[W*0.93,treeLine],[W*0.98,treeLine-4]];
+  for (const [tx, ty] of treeData) {
+    ctx.fillStyle = "#0d0818";
+    ctx.beginPath(); ctx.moveTo(tx, ty-18); ctx.lineTo(tx-7, ty); ctx.lineTo(tx+7, ty); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(tx, ty-26); ctx.lineTo(tx-5, ty-14); ctx.lineTo(tx+5, ty-14); ctx.closePath(); ctx.fill();
   }
 
-  // Sitting cat (keep “a lil under press space”)
-  const catX = Math.floor(W / 2 - DRAW_W / 2);
-  const catY = baseY + 232;
-  ctx.drawImage(
-    sitImg,
-    titleFrame * FRAME_W, 0, FRAME_W, FRAME_H,
-    catX, catY, DRAW_W, DRAW_H
-  );
+  // Ground / grass strip
+  ctx.fillStyle = "#0e0c1a";
+  ctx.fillRect(0, H * 0.73, W, H - H*0.73);
+  ctx.fillStyle = "#1a1428";
+  ctx.fillRect(0, H * 0.73, W, 6);
+
+  // Rain streaks (light)
+  for (const s of RAIN_STREAKS) {
+    ctx.save();
+    ctx.globalAlpha = s.alpha * 0.5;
+    ctx.strokeStyle = "#9988cc";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.lineTo(s.x - 1, s.y + s.len);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Pixie sitting on ground
+  const catX = Math.floor(W * 0.15);
+  const catY = Math.floor(H * 0.73) - DRAW_H + 10;
+  ctx.drawImage(sitImg, titleFrame * FRAME_W, 0, FRAME_W, FRAME_H, catX, catY, DRAW_W, DRAW_H);
+
+  // === TITLE TEXT — big, centred-right ===
+  ctx.textAlign = "center";
+  ctx.font = "22px 'Press Start 2P'";
+  // Drop shadow
+  ctx.fillStyle = "rgba(0,0,0,0.5)";
+  ctx.fillText("D0DZ", W/2 + 2, 52);
+  ctx.fillStyle = PAL.accent;
+  ctx.fillText("D0DZ", W/2, 50);
+
+  ctx.font = "6px 'Press Start 2P'";
+  ctx.fillStyle = "#cc88ff";
+  ctx.fillText("PIXIE HATES WATER", W/2, 66);
+  ctx.fillStyle = "rgba(212,250,255,0.5)";
+  ctx.fillText("HIGH SCORE: " + best, W/2, 80);
+
+  // === MENU BOX ===
+  const menuItems = ["START GAME", "HOW TO PLAY", "CONTROLS"];
+  const boxW = 190, boxH = 90;
+  const boxX = W/2 - boxW/2, boxY = H * 0.38;
+
+  // Box shadow
+  ctx.fillStyle = "rgba(0,0,0,0.6)";
+  ctx.fillRect(boxX + 3, boxY + 3, boxW, boxH);
+  // Box bg
+  ctx.fillStyle = "#0e0a1e";
+  ctx.fillRect(boxX, boxY, boxW, boxH);
+  // Box border (double pixel style like the ref image)
+  ctx.strokeStyle = "#cc88ff";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(boxX, boxY, boxW, boxH);
+  ctx.strokeStyle = "rgba(200,140,255,0.25)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(boxX + 4, boxY + 4, boxW - 8, boxH - 8);
+
+  for (let i = 0; i < menuItems.length; i++) {
+    const itemY = boxY + 24 + i * 24;
+    const selected = i === titleMenuIndex;
+    ctx.font = "7px 'Press Start 2P'";
+    if (selected) {
+      // Highlight row
+      ctx.fillStyle = "rgba(200,100,255,0.18)";
+      ctx.fillRect(boxX + 6, itemY - 10, boxW - 12, 14);
+      ctx.fillStyle = PAL.accent;
+      ctx.fillText("▶ " + menuItems[i], W/2, itemY);
+    } else {
+      ctx.fillStyle = "rgba(212,250,255,0.45)";
+      ctx.fillText(menuItems[i], W/2, itemY);
+    }
+  }
+
+  // Nav hint
+  ctx.font = "5px 'Press Start 2P'";
+  ctx.fillStyle = "rgba(200,140,255,0.4)";
+  ctx.fillText("↑↓ NAVIGATE   SPACE SELECT", W/2, boxY + boxH + 14);
+
+  // Blinking press space
+  if (blinkT < 30) {
+    ctx.font = "6px 'Press Start 2P'";
+    ctx.fillStyle = PAL.accent;
+    ctx.fillText("PRESS SPACE TO START", W/2, boxY + boxH + 28);
+  }
 
   ctx.textAlign = "left";
 }
 
+function drawHowToPlay() {
+  // Reuse bg
+  ctx.fillStyle = "#0e0a1e";
+  ctx.fillRect(0, 0, W, H);
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, "#1a0e30"); sky.addColorStop(1, "#6a2a40");
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+
+  ctx.textAlign = "center";
+  ctx.font = "9px 'Press Start 2P'";
+  ctx.fillStyle = PAL.accent;
+  ctx.fillText("HOW TO PLAY", W/2, 40);
+
+  const lines = [
+    ["GOAL", "SURVIVE AS LONG AS"],
+    ["",     "POSSIBLE!"],
+    ["",     ""],
+    ["MOVE", "LEFT / RIGHT ARROWS"],
+    ["",     ""],
+    ["DODGE", "AVOID THE RAINDROPS"],
+    ["",      "PIXIE HATES WATER!"],
+    ["",     ""],
+    ["SCORE", "EACH DROP THAT HITS"],
+    ["",      "THE GROUND = +POINTS"],
+    ["",     ""],
+    ["MODES", "EASY / MED / HARD"],
+    ["",      "HARDER = MORE DROPS"],
+    ["",      "+ FASTER SPEED"],
+  ];
+
+  ctx.textAlign = "left";
+  ctx.font = "5px 'Press Start 2P'";
+  let y = 68;
+  for (const [label, text] of lines) {
+    if (label) {
+      ctx.fillStyle = "#cc88ff";
+      ctx.fillText(label + ":", 20, y);
+    }
+    if (text) {
+      ctx.fillStyle = "rgba(212,250,255,0.8)";
+      ctx.fillText(text, label ? 82 : 20, y);
+    }
+    y += 14;
+  }
+
+  ctx.textAlign = "center";
+  if (blinkT < 30) {
+    ctx.font = "6px 'Press Start 2P'";
+    ctx.fillStyle = PAL.accent;
+    ctx.fillText("SPACE TO GO BACK", W/2, H - 16);
+  }
+  ctx.textAlign = "left";
+}
+
+function drawControls() {
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, "#1a0e30"); sky.addColorStop(1, "#6a2a40");
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+
+  ctx.textAlign = "center";
+  ctx.font = "9px 'Press Start 2P'";
+  ctx.fillStyle = PAL.accent;
+  ctx.fillText("CONTROLS", W/2, 40);
+
+  const controls = [
+    ["← →", "MOVE PIXIE"],
+    ["SPACE", "START / CONFIRM"],
+    ["ESC", "BACK TO TITLE"],
+    ["", ""],
+    ["TIPS:", ""],
+    ["", "STAY NEAR CENTRE"],
+    ["", "TO HAVE MORE TIME"],
+    ["", "TO REACT!"],
+    ["", ""],
+    ["", "DROPS SPEED UP"],
+    ["", "AS SCORE RISES!"],
+  ];
+
+  ctx.textAlign = "left";
+  ctx.font = "5px 'Press Start 2P'";
+  let y = 72;
+  for (const [key, desc] of controls) {
+    if (key && key !== "TIPS:") {
+      ctx.fillStyle = "#cc88ff";
+      ctx.fillRect(20, y - 8, 58, 12);
+      ctx.fillStyle = "#0e0a1e";
+      ctx.font = "5px 'Press Start 2P'";
+      ctx.fillText(key, 22, y);
+      ctx.fillStyle = "rgba(212,250,255,0.8)";
+      ctx.fillText(desc, 88, y);
+    } else if (key === "TIPS:") {
+      ctx.fillStyle = PAL.accent;
+      ctx.font = "5px 'Press Start 2P'";
+      ctx.fillText("TIPS:", 20, y);
+    } else if (desc === "") {
+      // spacer
+    } else {
+      ctx.fillStyle = "rgba(212,250,255,0.65)";
+      ctx.font = "5px 'Press Start 2P'";
+      ctx.fillText(desc, 20, y);
+    }
+    y += 16;
+  }
+
+  ctx.textAlign = "center";
+  if (blinkT < 30) {
+    ctx.font = "6px 'Press Start 2P'";
+    ctx.fillStyle = PAL.accent;
+    ctx.fillText("SPACE TO GO BACK", W/2, H - 16);
+  }
+  ctx.textAlign = "left";
+}
 function drawGameOver() {
   ctx.fillStyle = "rgba(0,0,0,0.7)";
   ctx.fillRect(0, 0, W, H);
@@ -1505,21 +1981,25 @@ function drawGameOver() {
 function draw() {
   ctx.clearRect(0, 0, W, H);
 
-  if (state === "title") {
+  if (state === "howtoplay") {
+    drawHowToPlay();
+  } else if (state === "controls") {
+    drawControls();
+  } else if (state === "title") {
     drawTitleScreen();
   } else if (state === "modeselect") {
     drawModeSelect();
   } else if (state === "loading") {
     drawLoadingScreen();
   } else if (state === "playing") {
-    if (selectedMode === 0) drawCityscape();
+    if (selectedMode === 0) drawBgEasy();
     else if (selectedMode === 1) drawBgMedium();
     else drawBgHard();
     drawEnemies();
     drawParticles();
     drawPlayer();
   } else if (state === "gameover") {
-    if (selectedMode === 0) drawCityscape();
+    if (selectedMode === 0) drawBgEasy();
     else if (selectedMode === 1) drawBgMedium();
     else drawBgHard();
     drawGameOver();

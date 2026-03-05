@@ -55,7 +55,7 @@ Then open `http://localhost:3000`
 
 ---
 
-## ✨ Features
+## Features
 
 - Retro Game Boy-inspired UI with pixel art visuals
 - Animated pixel cat sprite (Pixie!)
@@ -67,7 +67,7 @@ Then open `http://localhost:3000`
 
 ---
 
-## 🛠️ Technologies Used
+## Technologies Used
 
 - HTML5
 - CSS3

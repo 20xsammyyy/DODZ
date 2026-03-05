@@ -69,6 +69,37 @@ canvas.addEventListener("mousemove", (e) => {
 // GAME STATE
 // =========================
 let state = "title";
+let selectedMode = 0; // 0=easy, 1=medium, 2=hard
+
+const MODES = [
+  {
+    label: "EASY",
+    drops: 1,
+    speedMult: 1.0,
+    spawnBase: 55,
+    spawnMin: 30,
+    maxEnemies: 4,
+    scoreMult: 0.015,
+  },
+  {
+    label: "MEDIUM",
+    drops: 2,
+    speedMult: 1.4,
+    spawnBase: 40,
+    spawnMin: 22,
+    maxEnemies: 5,
+    scoreMult: 0.025,
+  },
+  {
+    label: "HARD",
+    drops: 3,
+    speedMult: 1.9,
+    spawnBase: 28,
+    spawnMin: 14,
+    maxEnemies: 7,
+    scoreMult: 0.035,
+  },
+];
 
 // =========================
 // LOADING SCREEN
@@ -284,12 +315,13 @@ const MAX_ENEMIES = 6;
 const SPAWN_COOLDOWN = 45;
 
 function enemySpeed() {
-  const difficulty = 1 + score * 0.025;
-  return (1.6 + Math.random() * 0.9) * Math.min(difficulty, 2.8);
+  const mode = MODES[selectedMode];
+  const difficulty = 1 + score * mode.scoreMult;
+  return (1.6 + Math.random() * 0.9) * mode.speedMult * Math.min(difficulty, 2.8);
 }
 
 function spawnEnemy() {
-  if (enemies.length >= MAX_ENEMIES) return;
+  if (enemies.length >= MODES[selectedMode].maxEnemies) return;
   enemies.push({
     w: ENEMY_SIZE,
     h: ENEMY_SIZE,
@@ -325,6 +357,29 @@ canvas.addEventListener("click", (e) => {
   const mx = ((e.clientX - rect.left) / rect.width) * W;
   const my = ((e.clientY - rect.top) / rect.height) * H;
 
+  if (state === "modeselect") {
+    // clicking left/right thirds selects mode, center confirms
+    if (my > H * 0.35 && my < H * 0.75) {
+      if (mx < W / 3) selectedMode = 0;
+      else if (mx < W * 2 / 3) selectedMode = 1;
+      else selectedMode = 2;
+    }
+    // confirm button area
+    const confirmBtn = { x: W/2 - 80, y: H * 0.78, w: 160, h: 28 };
+    if (pointInRect(mx, my, confirmBtn)) {
+      unlockSound();
+      playSfx(SFX.start);
+      startLoading();
+    }
+    // back to title
+    if (pointInRect(mx, my, backBtn)) {
+      state = "title";
+      blinkT = 0;
+      bgEnemies = [];
+    }
+    return;
+  }
+
   if (
     (state === "playing" || state === "gameover") &&
     pointInRect(mx, my, backBtn)
@@ -347,9 +402,17 @@ addEventListener("keydown", (e) => {
   if (e.key === " " || e.code === "Space") {
     unlockSound();
     if (state === "title" || state === "gameover") {
+      state = "modeselect";
+      selectedMode = 0;
+    } else if (state === "modeselect") {
       playSfx(SFX.start);
       startLoading();
     }
+  }
+
+  if (state === "modeselect") {
+    if (e.key === "ArrowLeft")  selectedMode = (selectedMode + 2) % 3;
+    if (e.key === "ArrowRight") selectedMode = (selectedMode + 1) % 3;
   }
 });
 
@@ -446,6 +509,14 @@ function update() {
     return;
   }
 
+  if (state === "modeselect") {
+    bgSpawnT++;
+    if (bgSpawnT >= 70) { bgSpawnT = 0; spawnBgEnemy(); }
+    for (const e of bgEnemies) e.y += e.vy;
+    bgEnemies = bgEnemies.filter((e) => e.y < H + 20);
+    return;
+  }
+
   if (state === "loading") {
     updateRainStreaks();
     loadTimer++;
@@ -494,7 +565,8 @@ function update() {
   spawnTimer--;
   if (spawnTimer <= 0) {
     spawnEnemy();
-    const cooldown = Math.max(22, SPAWN_COOLDOWN - Math.floor(score * 0.4));
+    const mode = MODES[selectedMode];
+    const cooldown = Math.max(mode.spawnMin, mode.spawnBase - Math.floor(score * 0.4));
     spawnTimer = cooldown;
   }
 
@@ -523,6 +595,271 @@ function update() {
   }
 
   updateParticles();
+}
+
+// =========================
+// DRAW — BACKGROUNDS BY MODE
+// =========================
+function drawBgEasy() {
+  // Night city — existing cityscape (unchanged)
+  drawCityscape();
+}
+
+function drawBgMedium() {
+  // Dusk / sunset city
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, "#1a0a2e");
+  sky.addColorStop(0.3, "#3d1a4a");
+  sky.addColorStop(0.6, "#7a2d3e");
+  sky.addColorStop(1, "#c45c2a");
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+
+  // Dusk rain streaks — warmer tint
+  for (const s of RAIN_STREAKS) {
+    ctx.save();
+    ctx.globalAlpha = s.alpha * 0.7;
+    ctx.strokeStyle = "#ffb88a";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.lineTo(s.x - 1, s.y + s.len);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Sun low on horizon
+  const sunX = W * 0.25;
+  const sunY = BUILDING_BASE - 10;
+  const sunGlow = ctx.createRadialGradient(sunX, sunY, 5, sunX, sunY, 60);
+  sunGlow.addColorStop(0, "rgba(255,160,60,0.6)");
+  sunGlow.addColorStop(0.4, "rgba(255,100,30,0.25)");
+  sunGlow.addColorStop(1, "rgba(255,60,0,0)");
+  ctx.fillStyle = sunGlow;
+  ctx.beginPath();
+  ctx.arc(sunX, sunY, 60, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#ffb347";
+  ctx.beginPath();
+  ctx.arc(sunX, sunY, 12, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Buildings — silhouetted warm
+  for (const b of BUILDINGS.filter(b => b.layer === 0)) {
+    ctx.fillStyle = "#1a0a1e";
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+    for (const w of b.windows) {
+      if (w.lit) {
+        ctx.fillStyle = "#ffcc66";
+        ctx.globalAlpha = 0.55;
+        ctx.fillRect(w.x, w.y, 5, 4);
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+  for (const b of BUILDINGS.filter(b => b.layer === 1)) {
+    ctx.fillStyle = "#0d0510";
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+    for (const w of b.windows) {
+      if (w.lit) {
+        ctx.fillStyle = "#ffaa44";
+        ctx.globalAlpha = 0.7;
+        ctx.fillRect(w.x, w.y, 5, 4);
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
+  // Ground
+  const ground = ctx.createLinearGradient(0, BUILDING_BASE, 0, H);
+  ground.addColorStop(0, "#1a0a10");
+  ground.addColorStop(1, "#2a1020");
+  ctx.fillStyle = ground;
+  ctx.fillRect(0, BUILDING_BASE, W, H - BUILDING_BASE);
+
+  ctx.strokeStyle = "#c45c2a";
+  ctx.globalAlpha = 0.3;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, BUILDING_BASE);
+  ctx.lineTo(W, BUILDING_BASE);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+function drawBgHard() {
+  // Thunderstorm — dark, electric, heavy rain
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, "#050508");
+  sky.addColorStop(0.5, "#0a0a14");
+  sky.addColorStop(1, "#0f0a18");
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+
+  // Heavy rain streaks — more dense and longer
+  for (const s of RAIN_STREAKS) {
+    ctx.save();
+    ctx.globalAlpha = s.alpha * 1.8;
+    ctx.strokeStyle = "#8ab4cc";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.lineTo(s.x - 2, s.y + s.len * 1.8);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Lightning flash (random subtle ambient)
+  if (Math.random() < 0.003) {
+    ctx.fillStyle = "rgba(180,180,255,0.06)";
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // Storm clouds at top
+  ctx.fillStyle = "rgba(20,15,35,0.7)";
+  ctx.fillRect(0, 0, W, 60);
+
+  // Buildings — nearly pitch black, few lights
+  for (const b of BUILDINGS.filter(b => b.layer === 0)) {
+    ctx.fillStyle = "#050508";
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+    for (const w of b.windows) {
+      if (w.lit && Math.random() < 0.3) {
+        ctx.fillStyle = "#6699cc";
+        ctx.globalAlpha = 0.4;
+        ctx.fillRect(w.x, w.y, 5, 4);
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+  for (const b of BUILDINGS.filter(b => b.layer === 1)) {
+    ctx.fillStyle = "#080810";
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+    for (const w of b.windows) {
+      if (w.lit && Math.random() < 0.25) {
+        ctx.fillStyle = "#aaccff";
+        ctx.globalAlpha = 0.45;
+        ctx.fillRect(w.x, w.y, 5, 4);
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
+  // Ground
+  const ground = ctx.createLinearGradient(0, BUILDING_BASE, 0, H);
+  ground.addColorStop(0, "#05050a");
+  ground.addColorStop(1, "#0a0a15");
+  ctx.fillStyle = ground;
+  ctx.fillRect(0, BUILDING_BASE, W, H - BUILDING_BASE);
+
+  ctx.strokeStyle = "#3a4aff";
+  ctx.globalAlpha = 0.25;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, BUILDING_BASE);
+  ctx.lineTo(W, BUILDING_BASE);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+// =========================
+// DRAW — MODE SELECT SCREEN
+// =========================
+function drawModeSelect() {
+  // Background preview of selected mode
+  if (selectedMode === 0) drawCityscape();
+  else if (selectedMode === 1) drawBgMedium();
+  else drawBgHard();
+
+  // Dark overlay
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.fillRect(0, 0, W, H);
+
+  const cx = W / 2;
+
+  // Title
+  ctx.textAlign = "center";
+  ctx.fillStyle = PAL.accent;
+  ctx.font = "10px 'Press Start 2P'";
+  ctx.fillText("SELECT MODE", cx, 38);
+
+  // Mode cards
+  const cardW = 82;
+  const cardH = 110;
+  const cardGap = 8;
+  const totalW = 3 * cardW + 2 * cardGap;
+  const cardStartX = cx - totalW / 2;
+  const cardY = 58;
+
+  const modeColors = ["#00ff88", "#ffaa44", "#ff4466"];
+  const modeBgs   = ["rgba(0,255,136,0.08)", "rgba(255,170,68,0.08)", "rgba(255,68,102,0.08)"];
+  const modeBorders = ["#00ff88", "#ffaa44", "#ff4466"];
+  const modeDescriptions = [
+    ["SLOW DROPS", "FEW ENEMIES"],
+    ["FASTER", "MORE DROPS"],
+    ["CHAOS!", "MAX SPEED"],
+  ];
+
+  for (let i = 0; i < 3; i++) {
+    const mode = MODES[i];
+    const cx2 = cardStartX + i * (cardW + cardGap) + cardW / 2;
+    const selected = i === selectedMode;
+
+    // Card bg
+    ctx.fillStyle = selected ? modeBgs[i] : "rgba(0,0,0,0.3)";
+    ctx.fillRect(cardStartX + i * (cardW + cardGap), cardY, cardW, cardH);
+
+    // Card border
+    ctx.strokeStyle = selected ? modeBorders[i] : "rgba(255,255,255,0.15)";
+    ctx.lineWidth = selected ? 2 : 1;
+    ctx.strokeRect(cardStartX + i * (cardW + cardGap), cardY, cardW, cardH);
+
+    // Mode label
+    ctx.fillStyle = selected ? modeColors[i] : "rgba(255,255,255,0.4)";
+    ctx.font = "7px 'Press Start 2P'";
+    ctx.fillText(mode.label, cx2, cardY + 18);
+
+    // Raindrop icons
+    const dropR = 5;
+    const dropSpacing = 14;
+    const dropsStartX = cx2 - ((mode.drops - 1) * dropSpacing) / 2;
+    for (let d = 0; d < mode.drops; d++) {
+      ctx.fillStyle = selected ? modeColors[i] : "rgba(255,255,255,0.3)";
+      ctx.globalAlpha = selected ? 1 : 0.5;
+      drawRaindrop(dropsStartX + d * dropSpacing, cardY + 42, dropR);
+    }
+    ctx.globalAlpha = 1;
+
+    // Description lines
+    ctx.fillStyle = selected ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)";
+    ctx.font = "5px 'Press Start 2P'";
+    for (let l = 0; l < modeDescriptions[i].length; l++) {
+      ctx.fillText(modeDescriptions[i][l], cx2, cardY + 70 + l * 14);
+    }
+
+    // Selected indicator arrow
+    if (selected) {
+      ctx.fillStyle = modeColors[i];
+      ctx.font = "8px 'Press Start 2P'";
+      ctx.fillText("▼", cx2, cardY + cardH + 14);
+    }
+  }
+
+  // Confirm prompt
+  ctx.textAlign = "center";
+  if (blinkT < 30) {
+    ctx.fillStyle = modeColors[selectedMode];
+    ctx.font = "7px 'Press Start 2P'";
+    ctx.fillText("PRESS SPACE TO PLAY", cx, H * 0.82);
+  }
+
+  // Nav hint
+  ctx.fillStyle = "rgba(255,255,255,0.3)";
+  ctx.font = "5px 'Press Start 2P'";
+  ctx.fillText("← → TO BROWSE", cx, H * 0.88);
+
+  ctx.textAlign = "left";
 }
 
 // =========================
@@ -796,7 +1133,7 @@ function drawUI() {
 }
 
 function drawBackButton() {
-  if (!(state === "playing" || state === "gameover")) return;
+  if (!(state === "playing" || state === "gameover" || state === "modeselect")) return;
 
   const hovered = pointInRect(mouseX, mouseY, backBtn);
 
@@ -826,7 +1163,9 @@ function drawTitleScreen() {
 
   // Title
   ctx.font = "16px 'Press Start 2P'";
+  ctx.fillStyle = PAL.accent;
   ctx.fillText("DØDZ", W / 2, baseY);
+  ctx.fillStyle = PAL.text;
 
   // Body text
   ctx.font = "8px 'Press Start 2P'";
@@ -839,10 +1178,32 @@ function drawTitleScreen() {
   ctx.fillStyle = PAL.border;
   ctx.fillText(`HIGH SCORE: ${best}`, W / 2, baseY + 168);
 
+  // Difficulty indicator — based on best score
+  const diffLevel = best >= 25 ? 3 : best >= 10 ? 2 : 1;
+  const diffLabel = diffLevel === 1 ? "EASY" : diffLevel === 2 ? "MEDIUM" : "HARD";
+  const dropR = 5;
+  const dropSpacing = 18;
+  const totalDropW = diffLevel * dropSpacing - (dropSpacing - dropR * 2);
+  const dropStartX = W / 2 - totalDropW / 2 - dropR + dropSpacing / 2;
+  const dropY = baseY + 193;
+
+  ctx.fillStyle = PAL.text;
+  ctx.font = "6px 'Press Start 2P'";
+  ctx.fillText(diffLabel, W / 2, dropY - 10);
+
+  for (let i = 0; i < 3; i++) {
+    const filled = i < diffLevel;
+    ctx.globalAlpha = filled ? 1 : 0.2;
+    ctx.fillStyle = filled ? "#d4faff" : PAL.text;
+    drawRaindrop(dropStartX + i * dropSpacing, dropY, dropR);
+  }
+  ctx.globalAlpha = 1;
+
   // Start prompt
   if (blinkT < 30) {
     ctx.fillStyle = PAL.accent;
-    ctx.fillText("PRESS SPACE TO START", W / 2, baseY + 208);
+    ctx.font = "8px 'Press Start 2P'";
+    ctx.fillText("PRESS SPACE TO START", W / 2, baseY + 222);
   }
 
   // Sitting cat (keep “a lil under press space”)
@@ -890,10 +1251,29 @@ function drawGameOver() {
     ctx.fillText("NEW BEST!", cx, cy + 56);
   }
 
+  // Difficulty drops
+  const diffLevel = best >= 25 ? 3 : best >= 10 ? 2 : 1;
+  const dropR = 5;
+  const dropSpacing = 18;
+  const dropStartX = cx - dropSpacing;
+  const dropY = cy + 72;
+
+  ctx.font = "6px 'Press Start 2P'";
+  ctx.fillStyle = PAL.text;
+  ctx.fillText("DIFFICULTY", cx, dropY - 10);
+
+  for (let i = 0; i < 3; i++) {
+    const filled = i < diffLevel;
+    ctx.globalAlpha = filled ? 1 : 0.2;
+    ctx.fillStyle = filled ? "#d4faff" : PAL.text;
+    drawRaindrop(dropStartX + i * dropSpacing, dropY, dropR);
+  }
+  ctx.globalAlpha = 1;
+
   // Restart prompt
   if (blinkT < 30) {
     ctx.fillStyle = PAL.accent;
-    ctx.fillText("PRESS SPACE TO RETRY", cx, cy + 100);
+    ctx.fillText("PRESS SPACE TO RETRY", cx, cy + 115);
   }
 
   ctx.textAlign = "left";
@@ -907,15 +1287,21 @@ function draw() {
 
   if (state === "title") {
     drawTitleScreen();
+  } else if (state === "modeselect") {
+    drawModeSelect();
   } else if (state === "loading") {
     drawLoadingScreen();
   } else if (state === "playing") {
-    drawCityscape();
+    if (selectedMode === 0) drawCityscape();
+    else if (selectedMode === 1) drawBgMedium();
+    else drawBgHard();
     drawEnemies();
     drawParticles();
     drawPlayer();
   } else if (state === "gameover") {
-    drawCityscape();
+    if (selectedMode === 0) drawCityscape();
+    else if (selectedMode === 1) drawBgMedium();
+    else drawBgHard();
     drawGameOver();
   }
 

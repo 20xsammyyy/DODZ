@@ -957,6 +957,23 @@ function drawBgMedium() {
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, W, H);
 
+  // Full moon
+  const moonX = W * 0.78, moonY = 58, moonR = 20;
+  const moonGlow = ctx.createRadialGradient(moonX, moonY, moonR * 0.4, moonX, moonY, moonR * 3);
+  moonGlow.addColorStop(0, "rgba(220,230,255,0.35)");
+  moonGlow.addColorStop(0.5, "rgba(180,200,255,0.12)");
+  moonGlow.addColorStop(1, "rgba(150,180,255,0)");
+  ctx.fillStyle = moonGlow;
+  ctx.beginPath(); ctx.arc(moonX, moonY, moonR * 3, 0, Math.PI * 2); ctx.fill();
+  // Moon body — full, no crescent cutout
+  ctx.fillStyle = "#dde8ff";
+  ctx.beginPath(); ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2); ctx.fill();
+  // Subtle surface detail
+  ctx.fillStyle = "rgba(180,200,240,0.25)";
+  ctx.beginPath(); ctx.arc(moonX - 5, moonY - 4, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(moonX + 6, moonY + 5, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(moonX + 2, moonY - 8, 2, 0, Math.PI * 2); ctx.fill();
+
   for (const s of RAIN_STREAKS) {
     ctx.save();
     ctx.globalAlpha = s.alpha;

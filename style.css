@@ -36,6 +36,15 @@ h1 {
 
   transform: rotate(-18deg);
 }
+
+.game-text {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  line-height: 1.6;
+  letter-spacing: 1px;
+  color: var(--ice);
+}
+
 /* Single border only — removed the conflicting canvas rule */
 #game {
   display: block;

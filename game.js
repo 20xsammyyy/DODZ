@@ -8,6 +8,11 @@ ctx.imageSmoothingEnabled = false;
 const W = canvas.width;
 const H = canvas.height;
 
+// ✅ Fonts: titles = Press Start 2P, body text = Orbitron
+const FONT_TITLE = "10px 'Press Start 2P', monospace";
+const FONT_UI    = "12px Orbitron, sans-serif";
+const FONT_UI_SM = "11px Orbitron, sans-serif";
+
 const GROUND_Y = H - 10;      // where Pixie stands — tune this
 const BUILDING_BASE = H - 30; // buildings always anchored near canvas bottom
 
@@ -564,7 +569,7 @@ function update() {
 
   const moving = left || right;
   if (moving && state === "playing") {
-  // every few frames so it doesn't spam
+    // every few frames so it doesn't spam
     if ((blinkT % 4) === 0) spawnDust(player.x + (player.w * 0.5));
   }
   if (left)  player.x -= player.speed;
@@ -880,7 +885,6 @@ function drawBgEasy() {
   ctx.globalAlpha = 1;
 }
 
-
 let cars = [];
 let carSpawnT = 0;
 
@@ -1072,6 +1076,7 @@ function drawBgMedium() {
   ctx.stroke();
   ctx.globalAlpha = 1;
 }
+
 // =========================
 // HARD MODE — DARK FOREST
 // =========================
@@ -1340,694 +1345,7 @@ function drawModeSelect() {
 
     // Description lines
     ctx.fillStyle = selected ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)";
-    ctx.font = "5px 'Press Start 2P'";
-    for (let l = 0; l < modeDescriptions[i].length; l++) {
-      ctx.fillText(modeDescriptions[i][l], cx2, cardY + 70 + l * 14);
-    }
-
-    // Selected indicator — small triangle above card
-    if (selected) {
-      ctx.fillStyle = modeColors[i];
-      ctx.font = "8px 'Press Start 2P'";
-      ctx.fillText("▲", cx2, cardY - 4);
-    }
-  }
-
-  // Confirm prompt
-  ctx.textAlign = "center";
-  if (blinkT < 30) {
-    ctx.fillStyle = modeColors[selectedMode];
-    ctx.font = "7px 'Press Start 2P'";
-    ctx.fillText("PRESS SPACE TO PLAY", cx, H / 2 + 110 / 2 + 30);
-  }
-
-  // Nav hint
-  ctx.fillStyle = "rgba(255,255,255,0.3)";
-  ctx.font = "5px 'Press Start 2P'";
-  ctx.fillText("← → TO BROWSE", cx, H / 2 + 110 / 2 + 48);
-
-  ctx.textAlign = "left";
-}
-
-// =========================
-// DRAW — CITYSCAPE
-// =========================
-function drawCityscape() {
-  // Sky
-  const sky = ctx.createLinearGradient(0, 0, 0, H);
-  sky.addColorStop(0, "#0d0d1a");
-  sky.addColorStop(0.6, "#1a1a2e");
-  sky.addColorStop(1, "#2a2040");
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, W, H);
-
-  // Rain streaks
-  // Moon
-  const moonX = W * 0.75;
-  const moonY = 52;
-  const moonR = 18;
-
-  // Outer glow
-  const moonGlow = ctx.createRadialGradient(moonX, moonY, moonR * 0.5, moonX, moonY, moonR * 2.5);
-  moonGlow.addColorStop(0, "rgba(218,186,255,0.18)");
-  moonGlow.addColorStop(1, "rgba(218,186,255,0)");
-  ctx.fillStyle = moonGlow;
-  ctx.beginPath();
-  ctx.arc(moonX, moonY, moonR * 2.5, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Moon body
-  ctx.fillStyle = "#dabaff";
-  ctx.beginPath();
-  ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Crescent shadow to make it a crescent moon
-  ctx.fillStyle = "#13112a";
-  ctx.beginPath();
-  ctx.arc(moonX + moonR * 0.45, moonY - moonR * 0.1, moonR * 0.82, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Rain streaks
-  for (const s of RAIN_STREAKS) {
-    ctx.save();
-    ctx.globalAlpha = s.alpha;
-    ctx.strokeStyle = "#a8d8ff";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(s.x, s.y);
-    ctx.lineTo(s.x - 1, s.y + s.len);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  // Back layer buildings
-  for (const b of BUILDINGS.filter(b => b.layer === 0)) {
-    ctx.fillStyle = "#111120";
-    ctx.fillRect(b.x, b.y, b.w, b.h);
-    for (const w of b.windows) {
-      if (w.lit) {
-        ctx.fillStyle = w.color;
-        ctx.globalAlpha = 0.7;
-        ctx.fillRect(w.x, w.y, 5, 4);
-        ctx.globalAlpha = 1;
-      }
-    }
-  }
-
-  // Front layer buildings
-  for (const b of BUILDINGS.filter(b => b.layer === 1)) {
-    ctx.fillStyle = "#1a1a2e";
-    ctx.fillRect(b.x, b.y, b.w, b.h);
-    for (const w of b.windows) {
-      if (w.lit) {
-        ctx.fillStyle = w.color;
-        ctx.globalAlpha = 0.85;
-        ctx.fillRect(w.x, w.y, 5, 4);
-        ctx.globalAlpha = 1;
-      }
-    }
-  }
-
-  // Wet street — anchored to BUILDING_BASE
-  const ground = ctx.createLinearGradient(0, BUILDING_BASE, 0, H);
-  ground.addColorStop(0, "#0d0d1a");
-  ground.addColorStop(1, "#1a1530");
-  ctx.fillStyle = ground;
-  ctx.fillRect(0, BUILDING_BASE, W, H - BUILDING_BASE);
-
-  // Street sheen
-  ctx.strokeStyle = "#bc8dff";
-  ctx.globalAlpha = 0.2;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, BUILDING_BASE);
-  ctx.lineTo(W, BUILDING_BASE);
-  ctx.stroke();
-  ctx.globalAlpha = 1;
-}
-
-// =========================
-// DRAW — LOADING SCREEN
-// =========================
-function drawLoadingScreen() {
-  drawCityscape();
-
-  ctx.fillStyle = "rgba(0,0,0,0.6)";
-  ctx.fillRect(0, 0, W, H);
-
-  const cx = W / 2;
-  const cy = H / 2;
-
-  if (scaredVisible) {
-    ctx.fillStyle = PAL.border;
-    ctx.font = "9px 'Press Start 2P'";
-    ctx.textAlign = "center";
-    ctx.fillText("PIXIE IS SCARED...", cx, cy - 40);
-  }
-
-  const barW = 200;
-  const barH = 16;
-  const barX = cx - barW / 2;
-  const barY = cy - 8;
-  const blockW = Math.floor(barW / LOAD_BLOCKS);
-  const filledBlocks = Math.floor((loadTimer / LOAD_DURATION) * LOAD_BLOCKS);
-
-  ctx.strokeStyle = PAL.text;
-  ctx.lineWidth = 2;
-  ctx.strokeRect(barX - 2, barY - 2, barW + 4, barH + 4);
-
-  for (let i = 0; i < LOAD_BLOCKS; i++) {
-    ctx.fillStyle = "#1a1a2e";
-    ctx.fillRect(barX + i * blockW + 1, barY + 1, blockW - 2, barH - 2);
-  }
-
-  for (let i = 0; i < filledBlocks; i++) {
-    const t = i / (LOAD_BLOCKS - 1);
-    const r = Math.round(188 + (0   - 188) * t);
-    const g = Math.round(141 + (255 - 141) * t);
-    const b = Math.round(255 + (136 - 255) * t);
-    ctx.fillStyle = `rgb(${r},${g},${b})`;
-    ctx.fillRect(barX + i * blockW + 1, barY + 1, blockW - 2, barH - 2);
-  }
-
-  if (filledBlocks >= LOAD_BLOCKS - 1) {
-    ctx.fillStyle = PAL.accent;
-    ctx.font = "10px 'Press Start 2P'";
-    ctx.textAlign = "center";
-    ctx.fillText("GET READY!", cx, cy + 40);
-  }
-
-  ctx.textAlign = "left";
-}
-
-// =========================
-// DRAW — TEARDROP
-// =========================
-function drawRaindrop(cx, cy, r) {
-  ctx.beginPath();
-  ctx.moveTo(cx, cy - r * 1.6);
-  ctx.bezierCurveTo(
-    cx + r * 0.6, cy - r * 0.6,
-    cx + r,       cy + r * 0.4,
-    cx,           cy + r
-  );
-  ctx.bezierCurveTo(
-    cx - r,       cy + r * 0.4,
-    cx - r * 0.6, cy - r * 0.6,
-    cx,           cy - r * 1.6
-  );
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.save();
-  ctx.globalAlpha = ctx.globalAlpha * 0.45;
-  ctx.fillStyle = "#ffffff";
-  ctx.beginPath();
-  ctx.ellipse(
-    cx - r * 0.28,
-    cy - r * 0.55,
-    r * 0.22,
-    r * 0.32,
-    -0.5, 0, Math.PI * 2
-  );
-  ctx.fill();
-  ctx.restore();
-}
-
-// =========================
-// DRAW — ENEMIES
-// =========================
-function drawEnemies() {
-  ctx.fillStyle = PAL.enemy;
-  for (const e of enemies) {
-    const r = e.w / 2;
-    drawRaindrop(Math.floor(e.x + r), Math.floor(e.y + r), r);
-  }
-}
-
-// =========================
-// DRAW — BG TEARDROPS (title)
-// =========================
-function drawBgEnemies() {
-  ctx.fillStyle = PAL.enemy;
-  for (const e of bgEnemies) {
-    ctx.globalAlpha = e.alpha;
-    drawRaindrop(Math.floor(e.x), Math.floor(e.y), e.r);
-  }
-  ctx.globalAlpha = 1;
-}
-
-// =========================
-// DRAW — PLAYER
-// =========================
-function drawPlayer() {
-  let sprite = idleImg;
-  if (anim === "run") sprite = facing === "west" ? runWestImg : runEastImg;
-
-  const feetY = GROUND_Y;
-  const drawX = Math.floor(player.x - (DRAW_W - player.w) / 2);
-  const drawY = Math.floor(feetY - DRAW_H);
-
-  ctx.drawImage(
-    sprite,
-    frame * FRAME_W, 0, FRAME_W, FRAME_H,
-    drawX, drawY, DRAW_W, DRAW_H
-  );
-}
-
-// =========================
-// DRAW — BORDER + UI
-// =========================
-function drawBorder() {
-  ctx.strokeStyle = PAL.border;
-  ctx.lineWidth = 6;
-  ctx.strokeRect(0, 0, W, H);
-  ctx.lineWidth = 1;
-}
-
-function drawScanlines() {
-  for (let y = 0; y < H; y += 2) {
-    ctx.fillStyle = "rgba(0,0,0,0.07)";
-    ctx.fillRect(0, y, W, 1);
-  }
-}
-
-function drawUI() {
-  if (state === "loading") return;
-
-  ctx.font = "8px 'Press Start 2P'";
-
-  // BEST stays top right — only during gameplay/gameover
-  if (state === "playing" || state === "gameover") {
-    ctx.fillStyle = PAL.text;
-    ctx.textAlign = "right";
-    ctx.fillText(`BEST: ${best}`, W - 12, 22);
-  }
-
-  // SCORE in the strip between ground and canvas bottom
-  if (state === "playing") {
-    ctx.fillStyle = PAL.accent;
-    ctx.textAlign = "right";
-    ctx.fillText(`SCORE: ${score}`, W - 12, H - 6);
-  }
-
-  ctx.textAlign = "left";
-}
-
-function drawBackButton() {
-  if (!(state === "playing" || state === "gameover" || state === "modeselect")) return;
-
-  const hovered = pointInRect(mouseX, mouseY, backBtn);
-
-  ctx.font = "8px 'Press Start 2P'";
-  ctx.fillStyle = hovered ? PAL.border : "#8977c9";
-  ctx.textAlign = "left";
-  ctx.fillText("<< BACK", backBtn.x, backBtn.y + 18);
-
-  ctx.textAlign = "left";
-  canvas.style.cursor = hovered ? "pointer" : "default";
-}
-
-// =========================
-// DRAW — SCREENS
-// =========================
-function drawTitleScreen() {
-  // === SKY — dusk purple/blue gradient ===
-  const sky = ctx.createLinearGradient(0, 0, 0, H);
-  sky.addColorStop(0,    "#1a0e30");
-  sky.addColorStop(0.35, "#2a1848");
-  sky.addColorStop(0.65, "#4a2258");
-  sky.addColorStop(1,    "#6a2a40");
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, W, H);
-
-  // Stars
-  const t = Date.now() * 0.0004;
-  for (let i = 0; i < 30; i++) {
-    const sx = ((i * 137.5) % W);
-    const sy = ((i * 61.3) % (H * 0.45));
-    const tw = (Math.sin(t + i * 1.9) * 0.5 + 0.5) * 0.7 + 0.1;
-    ctx.globalAlpha = tw;
-    ctx.fillStyle = "#fffbe8";
-    ctx.fillRect(sx|0, sy|0, 1, 1);
-  }
-  ctx.globalAlpha = 1;
-
-  // Moon
-  const moonX = W * 0.8, moonY = 55, moonR = 16;
-  const moonGlow = ctx.createRadialGradient(moonX, moonY, 2, moonX, moonY, moonR * 2.5);
-  moonGlow.addColorStop(0, "rgba(220,200,255,0.3)");
-  moonGlow.addColorStop(1, "rgba(180,140,255,0)");
-  ctx.fillStyle = moonGlow;
-  ctx.beginPath(); ctx.arc(moonX, moonY, moonR * 2.5, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = "#ddc8ff";
-  ctx.beginPath(); ctx.arc(moonX, moonY, moonR, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = "#2a1848";
-  ctx.beginPath(); ctx.arc(moonX + moonR*0.4, moonY - moonR*0.1, moonR*0.8, 0, Math.PI*2); ctx.fill();
-
-  // Far background hills — dark silhouette
-  ctx.fillStyle = "#180e28";
-  ctx.beginPath();
-  ctx.moveTo(0, H * 0.62);
-  ctx.bezierCurveTo(W*0.1, H*0.48, W*0.2, H*0.52, W*0.35, H*0.50);
-  ctx.bezierCurveTo(W*0.45, H*0.48, W*0.55, H*0.56, W*0.65, H*0.50);
-  ctx.bezierCurveTo(W*0.78, H*0.44, W*0.88, H*0.52, W, H*0.55);
-  ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
-
-  // Mid hills
-  ctx.fillStyle = "#120a1e";
-  ctx.beginPath();
-  ctx.moveTo(0, H * 0.72);
-  ctx.bezierCurveTo(W*0.15, H*0.60, W*0.28, H*0.65, W*0.42, H*0.60);
-  ctx.bezierCurveTo(W*0.55, H*0.55, W*0.68, H*0.63, W*0.82, H*0.60);
-  ctx.bezierCurveTo(W*0.92, H*0.57, W*0.97, H*0.63, W, H*0.65);
-  ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
-
-  // Trees on hills — small pixel pines
-  const treeLine = H * 0.62;
-  const treeData = [[W*0.05,treeLine],[W*0.12,treeLine-8],[W*0.19,treeLine+2],[W*0.55,treeLine-4],[W*0.62,treeLine-10],[W*0.68,treeLine+2],[W*0.88,treeLine-6],[W*0.93,treeLine],[W*0.98,treeLine-4]];
-  for (const [tx, ty] of treeData) {
-    ctx.fillStyle = "#0d0818";
-    ctx.beginPath(); ctx.moveTo(tx, ty-18); ctx.lineTo(tx-7, ty); ctx.lineTo(tx+7, ty); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(tx, ty-26); ctx.lineTo(tx-5, ty-14); ctx.lineTo(tx+5, ty-14); ctx.closePath(); ctx.fill();
-  }
-
-  // Ground / grass strip
-  ctx.fillStyle = "#0e0c1a";
-  ctx.fillRect(0, H * 0.73, W, H - H*0.73);
-  ctx.fillStyle = "#1a1428";
-  ctx.fillRect(0, H * 0.73, W, 6);
-
-  // Rain streaks (light)
-  for (const s of RAIN_STREAKS) {
-    ctx.save();
-    ctx.globalAlpha = s.alpha * 0.5;
-    ctx.strokeStyle = "#9988cc";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(s.x, s.y);
-    ctx.lineTo(s.x - 1, s.y + s.len);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  // Pixie sitting on ground
-  const catX = Math.floor(W * 0.15);
-  const catY = Math.floor(H * 0.73) - DRAW_H + 10;
-  ctx.drawImage(sitImg, titleFrame * FRAME_W, 0, FRAME_W, FRAME_H, catX, catY, DRAW_W, DRAW_H);
-
-  // === TITLE TEXT — big, centred-right ===
-  ctx.textAlign = "center";
-  ctx.font = "22px 'Press Start 2P'";
-  // Drop shadow
-  ctx.fillStyle = "rgba(0,0,0,0.5)";
-  ctx.fillText("D0DZ", W/2 + 2, 52);
-  ctx.fillStyle = PAL.accent;
-  ctx.fillText("D0DZ", W/2, 50);
-
-  ctx.font = "6px 'Press Start 2P'";
-  ctx.fillStyle = "#cc88ff";
-  ctx.fillText("PIXIE HATES WATER", W/2, 66);
-  ctx.fillStyle = "rgba(212,250,255,0.5)";
-  ctx.fillText("HIGH SCORE: " + best, W/2, 80);
-
-  // === MENU BOX ===
-  const menuItems = ["START GAME", "HOW TO PLAY", "CONTROLS"];
-  const boxW = 190, boxH = 90;
-  const boxX = W/2 - boxW/2, boxY = H * 0.38;
-
-  // Box shadow
-  ctx.fillStyle = "rgba(0,0,0,0.6)";
-  ctx.fillRect(boxX + 3, boxY + 3, boxW, boxH);
-  // Box bg
-  ctx.fillStyle = "#0e0a1e";
-  ctx.fillRect(boxX, boxY, boxW, boxH);
-  // Box border (double pixel style like the ref image)
-  ctx.strokeStyle = "#cc88ff";
-  ctx.lineWidth = 2;
-  ctx.strokeRect(boxX, boxY, boxW, boxH);
-  ctx.strokeStyle = "rgba(200,140,255,0.25)";
-  ctx.lineWidth = 1;
-  ctx.strokeRect(boxX + 4, boxY + 4, boxW - 8, boxH - 8);
-
-  for (let i = 0; i < menuItems.length; i++) {
-    const itemY = boxY + 24 + i * 24;
-    const selected = i === titleMenuIndex;
-    ctx.font = "7px 'Press Start 2P'";
-    if (selected) {
-      // Highlight row
-      ctx.fillStyle = "rgba(200,100,255,0.18)";
-      ctx.fillRect(boxX + 6, itemY - 10, boxW - 12, 14);
-      ctx.fillStyle = PAL.accent;
-      ctx.fillText("▶ " + menuItems[i], W/2, itemY);
-    } else {
-      ctx.fillStyle = "rgba(212,250,255,0.45)";
-      ctx.fillText(menuItems[i], W/2, itemY);
-    }
-  }
-
-  // Nav hint
-  ctx.font = "5px 'Press Start 2P'";
-  ctx.fillStyle = "rgba(200,140,255,0.4)";
-  ctx.fillText("↑↓ NAVIGATE   SPACE SELECT", W/2, boxY + boxH + 14);
-
-  // Blinking press space
-  if (blinkT < 30) {
-    ctx.font = "6px 'Press Start 2P'";
-    ctx.fillStyle = PAL.accent;
-    ctx.fillText("PRESS SPACE TO START", W/2, boxY + boxH + 28);
-  }
-
-  ctx.textAlign = "left";
-}
-
-function drawHowToPlay() {
-  ctx.fillStyle = "#0d0a1a";
-  ctx.fillRect(0, 0, W, H);
-
-  // Header bar
-  ctx.fillStyle = "#1a1030";
-  ctx.fillRect(0, 0, W, 52);
-  ctx.strokeStyle = PAL.accent;
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(0, 52); ctx.lineTo(W, 52); ctx.stroke();
-
-  ctx.textAlign = "center";
-  ctx.font = "10px 'Press Start 2P'";
-  ctx.fillStyle = PAL.accent;
-  ctx.fillText("HOW TO PLAY", W/2, 32);
-
-  // Content
-  const entries = [
-    { label: "GOAL",  text: "SURVIVE AS LONG AS POSSIBLE" },
-    { label: "MOVE",  text: "LEFT + RIGHT ARROW KEYS" },
-    { label: "DODGE", text: "AVOID THE RAINDROPS" },
-    { label: "SCORE", text: "EARN POINTS FOR EACH DROP THAT HITS THE GROUND" },
-    { label: "MODES", text: "EASY / MED / HARD — HARDER = FASTER + MORE DROPS" },
-  ];
-
-  let y = 76;
-  for (const e of entries) {
-    // Label pill
-    ctx.fillStyle = "#2a1848";
-    ctx.fillRect(12, y - 10, 62, 14);
-    ctx.strokeStyle = "#cc88ff";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(12, y - 10, 62, 14);
-    ctx.textAlign = "left";
-    ctx.font = "6px 'Press Start 2P'";
-    ctx.fillStyle = "#cc88ff";
-    ctx.fillText(e.label, 16, y);
-
-    // Text — word wrap at ~26 chars
-    ctx.fillStyle = "#e8e8ff";
-    ctx.font = "6px 'Press Start 2P'";
-    const words = e.text.split(" ");
-    let line = "", lineY = y;
-    for (const word of words) {
-      const test = line + (line ? " " : "") + word;
-      if (test.length > 26 && line) {
-        ctx.fillText(line, 82, lineY);
-        line = word; lineY += 13;
-      } else { line = test; }
-    }
-    ctx.fillText(line, 82, lineY);
-
-    y = Math.max(y + 28, lineY + 18);
-  }
-
-  // Back hint
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#1a1030";
-  ctx.fillRect(0, H - 30, W, 30);
-  ctx.strokeStyle = PAL.accent;
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(0, H-30); ctx.lineTo(W, H-30); ctx.stroke();
-  if (blinkT < 30) {
-    ctx.font = "6px 'Press Start 2P'";
-    ctx.fillStyle = PAL.accent;
-    ctx.fillText("SPACE TO GO BACK", W/2, H - 12);
-  }
-  ctx.textAlign = "left";
-}
-
-function drawControls() {
-  ctx.fillStyle = "#0d0a1a";
-  ctx.fillRect(0, 0, W, H);
-
-  // Header bar
-  ctx.fillStyle = "#1a1030";
-  ctx.fillRect(0, 0, W, 52);
-  ctx.strokeStyle = PAL.accent;
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(0, 52); ctx.lineTo(W, 52); ctx.stroke();
-
-  ctx.textAlign = "center";
-  ctx.font = "10px 'Press Start 2P'";
-  ctx.fillStyle = PAL.accent;
-  ctx.fillText("CONTROLS", W/2, 32);
-
-  const keys = [
-    { key: "← →", desc: "MOVE PIXIE" },
-    { key: "SPACE",  desc: "START / CONFIRM" },
-    { key: "ESC",    desc: "BACK TO TITLE" },
-  ];
-
-  let y = 78;
-  ctx.textAlign = "left";
-  for (const k of keys) {
-    // Key chip
-    ctx.fillStyle = "#2a1848";
-    ctx.fillRect(12, y - 10, 70, 16);
-    ctx.strokeStyle = "#cc88ff";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(12, y - 10, 70, 16);
-    ctx.font = "6px 'Press Start 2P'";
-    ctx.fillStyle = "#ffffff";
-    ctx.textAlign = "center";
-    ctx.fillText(k.key, 47, y + 1);
-
-    ctx.textAlign = "left";
-    ctx.fillStyle = "#e8e8ff";
-    ctx.font = "6px 'Press Start 2P'";
-    ctx.fillText(k.desc, 92, y + 1);
-    y += 30;
-  }
-
-  // Tips section
-  y += 8;
-  ctx.fillStyle = "#1e1038";
-  ctx.fillRect(10, y - 8, W - 20, 72);
-  ctx.strokeStyle = "rgba(200,140,255,0.3)";
-  ctx.lineWidth = 1;
-  ctx.strokeRect(10, y - 8, W - 20, 72);
-
-  ctx.textAlign = "left";
-  ctx.font = "6px 'Press Start 2P'";
-  ctx.fillStyle = PAL.accent;
-  ctx.fillText("TIPS", 18, y + 6);
-
-  const tips = [
-    "STAY NEAR CENTRE — MORE",
-    "TIME TO REACT!",
-    "",
-    "DROPS GET FASTER AS",
-    "YOUR SCORE RISES!",
-  ];
-  ctx.fillStyle = "#c8c8f0";
-  let ty = y + 22;
-  for (const tip of tips) {
-    if (tip) ctx.fillText(tip, 18, ty);
-    ty += 12;
-  }
-
-  // Back hint
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#1a1030";
-  ctx.fillRect(0, H - 30, W, 30);
-  ctx.strokeStyle = PAL.accent;
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(0, H-30); ctx.lineTo(W, H-30); ctx.stroke();
-  if (blinkT < 30) {
-    ctx.font = "6px 'Press Start 2P'";
-    ctx.fillStyle = PAL.accent;
-    ctx.fillText("SPACE TO GO BACK", W/2, H - 12);
-  }
-  ctx.textAlign = "left";
-}
-
-// =========================
-// DRAW — MODE SELECT SCREEN
-// =========================
-function drawModeSelect() {
-  // Background preview of selected mode
-  if (selectedMode === 0) drawBgEasy();
-  else if (selectedMode === 1) drawBgMedium();
-  else drawBgHard();
-
-  // Dark overlay
-  ctx.fillStyle = "rgba(0,0,0,0.55)";
-  ctx.fillRect(0, 0, W, H);
-
-  const cx = W / 2;
-
-  // Title
-  ctx.textAlign = "center";
-  ctx.fillStyle = PAL.accent;
-  ctx.font = "10px 'Press Start 2P'";
-  ctx.fillText("SELECT MODE", cx, H / 2 - 110 / 2 - 28);
-
-  // Mode cards
-  const cardW = 82;
-  const cardH = 110;
-  const cardGap = 8;
-  const totalW = 3 * cardW + 2 * cardGap;
-  const cardStartX = cx - totalW / 2;
-  const cardY = H / 2 - cardH / 2 - 10;
-
-  const modeColors = ["#00ff88", "#ffaa44", "#ff4466"];
-  const modeBgs   = ["rgba(0,255,136,0.08)", "rgba(255,170,68,0.08)", "rgba(255,68,102,0.08)"];
-  const modeBorders = ["#00ff88", "#ffaa44", "#ff4466"];
-  const modeDescriptions = [
-    ["SLOW DROPS", "FEW ENEMIES"],
-    ["FASTER", "MORE DROPS"],
-    ["CHAOS!", "MAX SPEED"],
-  ];
-
-  for (let i = 0; i < 3; i++) {
-    const mode = MODES[i];
-    const cx2 = cardStartX + i * (cardW + cardGap) + cardW / 2;
-    const selected = i === selectedMode;
-
-    // Card bg — always same dark fill
-    ctx.fillStyle = "rgba(0,0,0,0.3)";
-    ctx.fillRect(cardStartX + i * (cardW + cardGap), cardY, cardW, cardH);
-
-    // Card border
-    ctx.strokeStyle = selected ? modeBorders[i] : "rgba(255,255,255,0.15)";
-    ctx.lineWidth = selected ? 2 : 1;
-    ctx.strokeRect(cardStartX + i * (cardW + cardGap), cardY, cardW, cardH);
-
-    // Mode label
-    ctx.fillStyle = selected ? modeColors[i] : "rgba(255,255,255,0.4)";
-    ctx.font = "7px 'Press Start 2P'";
-    ctx.fillText(mode.label, cx2, cardY + 18);
-
-    // Raindrop icons
-    const dropR = 5;
-    const dropSpacing = 14;
-    const dropsStartX = cx2 - ((mode.drops - 1) * dropSpacing) / 2;
-    for (let d = 0; d < mode.drops; d++) {
-      ctx.fillStyle = selected ? modeColors[i] : "rgba(255,255,255,0.3)";
-      ctx.globalAlpha = selected ? 1 : 0.5;
-      drawRaindrop(dropsStartX + d * dropSpacing, cardY + 42, dropR);
-    }
-    ctx.globalAlpha = 1;
-
-    // Description lines
-    ctx.fillStyle = selected ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)";
-    ctx.font = "5px 'Press Start 2P'";
+    ctx.font = FONT_UI;
     for (let l = 0; l < modeDescriptions[i].length; l++) {
       ctx.fillText(modeDescriptions[i][l], cx2, cardY + 70 + l * 14);
     }
@@ -2429,15 +1747,13 @@ function drawTitleScreen() {
   ctx.font = "22px 'Press Start 2P'";
   // Drop shadow
   ctx.fillStyle = "rgba(0,0,0,0.5)";
-  ctx.fillText("D0DZ", W/2 + 2, 52);
+  ctx.fillText("D0DZ", W/2 + 2, 110);
   ctx.fillStyle = PAL.accent;
-  ctx.fillText("D0DZ", W/2, 50);
+  ctx.fillText("D0DZ", W/2, 105);
 
-  ctx.font = "6px 'Press Start 2P'";
-  ctx.fillStyle = "#cc88ff";
-  ctx.fillText("PIXIE HATES WATER", W/2, 66);
-  ctx.fillStyle = "rgba(212,250,255,0.5)";
-  ctx.fillText("HIGH SCORE: " + best, W/2, 80);
+  ctx.font = FONT_UI_SM;
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.fillText("PIXIE HATES WATER", W/2, 120);
 
   // === MENU BOX ===
   const menuItems = ["START GAME", "HOW TO PLAY", "CONTROLS"];
@@ -2475,15 +1791,18 @@ function drawTitleScreen() {
   }
 
   // Nav hint
-  ctx.font = "5px 'Press Start 2P'";
-  ctx.fillStyle = "rgba(200,140,255,0.4)";
-  ctx.fillText("↑↓ NAVIGATE   SPACE SELECT", W/2, boxY + boxH + 14);
+  ctx.font = FONT_UI;
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.fillText("Press ↑↓ ; SPACE to CHOOSE", W/2, boxY + boxH + 20);
 
-  // Blinking press space
+  // Blinking press space (under Pixie)
+  const promptY = Math.floor(H * 0.73) + 34;
+
   if (blinkT < 30) {
-    ctx.font = "6px 'Press Start 2P'";
+    ctx.textAlign = "center";                 // ensure centered
+    ctx.font = "7px 'Press Start 2P'";
     ctx.fillStyle = PAL.accent;
-    ctx.fillText("PRESS SPACE TO START", W/2, boxY + boxH + 28);
+    ctx.fillText("PRESS SPACE TO START", W / 2, promptY);
   }
 
   ctx.textAlign = "left";
@@ -2503,35 +1822,40 @@ function drawHowToPlay() {
   ctx.fillText("HOW TO PLAY", W/2, 40);
 
   const lines = [
-    ["GOAL", "SURVIVE AS LONG AS"],
-    ["",     "POSSIBLE!"],
+    ["GOAL", ""],
+    ["",     "SURVIVE AS LONG AS POSSIBLE!"],
     ["",     ""],
-    ["MOVE", "LEFT / RIGHT ARROWS"],
+    ["MOVE", ""],
+    ["",     "TOGGLE LEFT / RIGHT ARROWS"],
     ["",     ""],
-    ["DODGE", "AVOID THE RAINDROPS"],
-    ["",      "PIXIE HATES WATER!"],
+    ["DODGE", ""],
+    ["",      "AVOID THE RAINDROPS. PIXIE HATES"],
+    ["",     "WATER!"],
     ["",     ""],
-    ["SCORE", "EACH DROP THAT HITS"],
-    ["",      "THE GROUND = +POINTS"],
+    ["SCORE", ""],
+    ["",      "FOR EACH RAINDROP AVOIDED A"],
+    ["",     "POINT IS AWARDED"],
     ["",     ""],
-    ["MODES", "EASY / MED / HARD"],
-    ["",      "HARDER = MORE DROPS"],
-    ["",      "+ FASTER SPEED"],
+    ["MODES", ""],
+    ["",     "EASY / MED / HARD"],
+    ["",      "HIGHER LEVEL = MORE DROPS "],
+    ["",      "& FASTER SPEED"],
   ];
 
   ctx.textAlign = "left";
-  ctx.font = "5px 'Press Start 2P'";
   let y = 68;
   for (const [label, text] of lines) {
     if (label) {
       ctx.fillStyle = "#cc88ff";
+      ctx.font = FONT_UI_SM;              // ✅ Orbitron for labels
       ctx.fillText(label + ":", 20, y);
     }
     if (text) {
       ctx.fillStyle = "rgba(212,250,255,0.8)";
+      ctx.font = FONT_UI;                 // ✅ Orbitron for text
       ctx.fillText(text, label ? 82 : 20, y);
     }
-    y += 14;
+    y += 13;
   }
 
   ctx.textAlign = "center";
@@ -2556,38 +1880,35 @@ function drawControls() {
   const controls = [
     ["← →", "MOVE PIXIE"],
     ["SPACE", "START / CONFIRM"],
-    ["ESC", "BACK TO TITLE"],
     ["", ""],
     ["TIPS:", ""],
-    ["", "STAY NEAR CENTRE"],
-    ["", "TO HAVE MORE TIME"],
-    ["", "TO REACT!"],
+    ["", "TO HAVE MORE TIME TO REACT STAY"],
+    ["", "NEAR THE CENTRE"],
     ["", ""],
-    ["", "DROPS SPEED UP"],
-    ["", "AS SCORE RISES!"],
+    ["", "DROPS SPEED UP AS SCORE RISES!"],
   ];
 
   ctx.textAlign = "left";
-  ctx.font = "5px 'Press Start 2P'";
   let y = 72;
   for (const [key, desc] of controls) {
     if (key && key !== "TIPS:") {
       ctx.fillStyle = "#cc88ff";
       ctx.fillRect(20, y - 8, 58, 12);
       ctx.fillStyle = "#0e0a1e";
-      ctx.font = "5px 'Press Start 2P'";
+      ctx.font = FONT_UI_SM;              // ✅ Orbitron for key label
       ctx.fillText(key, 22, y);
       ctx.fillStyle = "rgba(212,250,255,0.8)";
+      ctx.font = FONT_UI;                 // ✅ Orbitron for description
       ctx.fillText(desc, 88, y);
     } else if (key === "TIPS:") {
       ctx.fillStyle = PAL.accent;
-      ctx.font = "5px 'Press Start 2P'";
+      ctx.font = FONT_UI_SM;              // ✅ Orbitron for "TIPS:"
       ctx.fillText("TIPS:", 20, y);
     } else if (desc === "") {
       // spacer
     } else {
       ctx.fillStyle = "rgba(212,250,255,0.65)";
-      ctx.font = "5px 'Press Start 2P'";
+      ctx.font = FONT_UI;                 // ✅ Orbitron for tip lines
       ctx.fillText(desc, 20, y);
     }
     y += 16;
@@ -2601,6 +1922,7 @@ function drawControls() {
   }
   ctx.textAlign = "left";
 }
+
 function drawGameOver() {
   ctx.fillStyle = "rgba(0,0,0,0.7)";
   ctx.fillRect(0, 0, W, H);
@@ -2635,7 +1957,7 @@ function drawGameOver() {
   }
 
   // Difficulty drops
-  const diffLevel = best >= 25 ? 3 : best >= 10 ? 2 : 1;
+  const diffLevel = selectedMode + 1;
   const dropR = 5;
   const dropSpacing = 18;
   const dropStartX = cx - dropSpacing;

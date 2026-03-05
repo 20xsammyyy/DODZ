@@ -10,6 +10,18 @@ Dodge falling raindrops by moving left and right. The longer Pixie survives, the
 
 ---
 
+## Features
+
+- Retro Game Boy-inspired UI with pixel art visuals
+- Animated pixel cat sprite (Pixie!)
+- Rainy night cityscape background with moon
+- Dust particles when running, splash effects when raindrops hit the ground
+- Score tracking with persistent high score
+- Loading screen with arcade-style progress bar
+- Scanline overlay for authentic retro feel
+
+---
+
 ## 🕹️ Controls
 
 | Key | Action |
@@ -52,27 +64,6 @@ npx serve .
 Then open `http://localhost:3000`
 
 > **Why a local server?** Browsers block local file access for security reasons. A local server bypasses this so sprites and audio load correctly.
-
----
-
-## Features
-
-- Retro Game Boy-inspired UI with pixel art visuals
-- Animated pixel cat sprite (Pixie!)
-- Rainy night cityscape background with moon
-- Dust particles when running, splash effects when raindrops hit the ground
-- Score tracking with persistent high score
-- Loading screen with arcade-style progress bar
-- Scanline overlay for authentic retro feel
-
----
-
-## Technologies Used
-
-- HTML5
-- CSS3
-- Vanilla JavaScript
-- HTML5 Canvas API
 
 ---
 

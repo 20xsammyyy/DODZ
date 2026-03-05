@@ -358,14 +358,19 @@ canvas.addEventListener("click", (e) => {
   const my = ((e.clientY - rect.top) / rect.height) * H;
 
   if (state === "modeselect") {
-    // clicking left/right thirds selects mode, center confirms
-    if (my > H * 0.35 && my < H * 0.75) {
-      if (mx < W / 3) selectedMode = 0;
-      else if (mx < W * 2 / 3) selectedMode = 1;
-      else selectedMode = 2;
+    // clicking cards — match exact drawn positions
+    const cardW2 = 82, cardH2 = 110, cardGap2 = 8;
+    const totalW2 = 3 * cardW2 + 2 * cardGap2;
+    const cardStartX2 = W / 2 - totalW2 / 2;
+    const cardY2 = 58;
+    for (let i = 0; i < 3; i++) {
+      const cx3 = cardStartX2 + i * (cardW2 + cardGap2);
+      if (pointInRect(mx, my, { x: cx3, y: cardY2, w: cardW2, h: cardH2 })) {
+        selectedMode = i;
+      }
     }
     // confirm button area
-    const confirmBtn = { x: W/2 - 80, y: H * 0.78, w: 160, h: 28 };
+    const confirmBtn = { x: W/2 - 80, y: cardY2 + cardH2 + 30, w: 160, h: 28 };
     if (pointInRect(mx, my, confirmBtn)) {
       unlockSound();
       playSfx(SFX.start);
@@ -531,6 +536,8 @@ function update() {
 
   if (state === "playing") {
     updateRainStreaks();
+    updateCars();
+    if (selectedMode === 2) updateLightning();
   }
 
   if (state !== "playing") return;
@@ -605,21 +612,85 @@ function drawBgEasy() {
   drawCityscape();
 }
 
+// =========================
+// MEDIUM MODE — STREET CARS
+// =========================
+let cars = [];
+let carSpawnT = 0;
+
+function spawnCar() {
+  const goingRight = Math.random() < 0.5;
+  const carColors = ["#e03040", "#e07820", "#3080e0", "#30c060", "#c0c020", "#a030d0"];
+  const col = carColors[Math.floor(Math.random() * carColors.length)];
+  const carW = 36 + Math.floor(Math.random() * 20);
+  const carH = 14;
+  const lane = Math.random() < 0.5 ? 0 : 1;
+  const laneY = BUILDING_BASE + 8 + lane * 16;
+  cars.push({
+    x: goingRight ? -carW - 10 : W + 10,
+    y: laneY,
+    w: carW,
+    h: carH,
+    vx: (2.5 + Math.random() * 2) * (goingRight ? 1 : -1),
+    color: col,
+    dir: goingRight ? 1 : -1,
+  });
+}
+
+function updateCars() {
+  if (selectedMode !== 1) return;
+  carSpawnT++;
+  if (carSpawnT >= 55) { carSpawnT = 0; spawnCar(); }
+  for (const c of cars) c.x += c.vx;
+  cars = cars.filter(c => c.x > -80 && c.x < W + 80);
+}
+
+function drawCar(c) {
+  ctx.fillStyle = c.color;
+  ctx.fillRect(c.x | 0, c.y | 0, c.w, c.h);
+
+  ctx.fillStyle = "rgba(0,0,0,0.3)";
+  const roofX = c.dir === 1 ? c.x + c.w * 0.25 : c.x + c.w * 0.1;
+  ctx.fillRect(roofX | 0, (c.y - 7) | 0, (c.w * 0.5) | 0, 8);
+
+  ctx.fillStyle = "rgba(180,230,255,0.6)";
+  ctx.fillRect((roofX + 2) | 0, (c.y - 6) | 0, (c.w * 0.2) | 0, 5);
+  ctx.fillRect((roofX + c.w * 0.25) | 0, (c.y - 6) | 0, (c.w * 0.18) | 0, 5);
+
+  ctx.fillStyle = "#222";
+  ctx.fillRect((c.x + 4) | 0, (c.y + c.h - 2) | 0, 8, 5);
+  ctx.fillRect((c.x + c.w - 12) | 0, (c.y + c.h - 2) | 0, 8, 5);
+
+  if (c.dir === 1) {
+    ctx.fillStyle = "#ffffaa";
+    ctx.fillRect((c.x + c.w - 2) | 0, (c.y + 2) | 0, 3, 4);
+    ctx.fillStyle = "#ff4444";
+    ctx.fillRect(c.x | 0, (c.y + 2) | 0, 3, 4);
+  } else {
+    ctx.fillStyle = "#ffffaa";
+    ctx.fillRect(c.x | 0, (c.y + 2) | 0, 3, 4);
+    ctx.fillStyle = "#ff4444";
+    ctx.fillRect((c.x + c.w - 3) | 0, (c.y + 2) | 0, 3, 4);
+  }
+
+  ctx.fillStyle = c.color;
+  ctx.globalAlpha = 0.12;
+  ctx.fillRect((c.x + 4) | 0, (c.y + c.h + 3) | 0, c.w - 8, 4);
+  ctx.globalAlpha = 1;
+}
+
 function drawBgMedium() {
-  // Dusk / sunset city
   const sky = ctx.createLinearGradient(0, 0, 0, H);
-  sky.addColorStop(0, "#1a0a2e");
-  sky.addColorStop(0.3, "#3d1a4a");
-  sky.addColorStop(0.6, "#7a2d3e");
-  sky.addColorStop(1, "#c45c2a");
+  sky.addColorStop(0, "#0a0a18");
+  sky.addColorStop(0.55, "#12102a");
+  sky.addColorStop(1, "#1a1530");
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, W, H);
 
-  // Dusk rain streaks — warmer tint
   for (const s of RAIN_STREAKS) {
     ctx.save();
-    ctx.globalAlpha = s.alpha * 0.7;
-    ctx.strokeStyle = "#ffb88a";
+    ctx.globalAlpha = s.alpha;
+    ctx.strokeStyle = "#a8d8ff";
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(s.x, s.y);
@@ -628,133 +699,303 @@ function drawBgMedium() {
     ctx.restore();
   }
 
-  // Sun low on horizon
-  const sunX = W * 0.25;
-  const sunY = BUILDING_BASE - 10;
-  const sunGlow = ctx.createRadialGradient(sunX, sunY, 5, sunX, sunY, 60);
-  sunGlow.addColorStop(0, "rgba(255,160,60,0.6)");
-  sunGlow.addColorStop(0.4, "rgba(255,100,30,0.25)");
-  sunGlow.addColorStop(1, "rgba(255,60,0,0)");
-  ctx.fillStyle = sunGlow;
-  ctx.beginPath();
-  ctx.arc(sunX, sunY, 60, 0, Math.PI * 2);
-  ctx.fill();
+  const lampPositions = [W * 0.15, W * 0.45, W * 0.75];
+  for (const lx of lampPositions) {
+    const glow = ctx.createRadialGradient(lx, BUILDING_BASE - 60, 2, lx, BUILDING_BASE - 60, 55);
+    glow.addColorStop(0, "rgba(255,220,120,0.22)");
+    glow.addColorStop(1, "rgba(255,180,60,0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(lx, BUILDING_BASE - 60, 55, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
-  ctx.fillStyle = "#ffb347";
-  ctx.beginPath();
-  ctx.arc(sunX, sunY, 12, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Buildings — silhouetted warm
   for (const b of BUILDINGS.filter(b => b.layer === 0)) {
-    ctx.fillStyle = "#1a0a1e";
+    ctx.fillStyle = "#0a0a14";
     ctx.fillRect(b.x, b.y, b.w, b.h);
     for (const w of b.windows) {
       if (w.lit) {
-        ctx.fillStyle = "#ffcc66";
-        ctx.globalAlpha = 0.55;
+        ctx.fillStyle = w.color;
+        ctx.globalAlpha = 0.6;
         ctx.fillRect(w.x, w.y, 5, 4);
         ctx.globalAlpha = 1;
       }
     }
   }
   for (const b of BUILDINGS.filter(b => b.layer === 1)) {
-    ctx.fillStyle = "#0d0510";
+    ctx.fillStyle = "#111120";
     ctx.fillRect(b.x, b.y, b.w, b.h);
     for (const w of b.windows) {
       if (w.lit) {
-        ctx.fillStyle = "#ffaa44";
-        ctx.globalAlpha = 0.7;
+        ctx.fillStyle = w.color;
+        ctx.globalAlpha = 0.75;
         ctx.fillRect(w.x, w.y, 5, 4);
         ctx.globalAlpha = 1;
       }
     }
   }
 
-  // Ground
-  const ground = ctx.createLinearGradient(0, BUILDING_BASE, 0, H);
-  ground.addColorStop(0, "#1a0a10");
-  ground.addColorStop(1, "#2a1020");
-  ctx.fillStyle = ground;
-  ctx.fillRect(0, BUILDING_BASE, W, H - BUILDING_BASE);
+  // Road
+  const roadTop = BUILDING_BASE;
+  const roadH = H - roadTop;
+  ctx.fillStyle = "#1a1a24";
+  ctx.fillRect(0, roadTop, W, roadH);
 
-  ctx.strokeStyle = "#c45c2a";
-  ctx.globalAlpha = 0.3;
+  // Lane divider
+  ctx.strokeStyle = "#ccaa00";
+  ctx.lineWidth = 2;
+  ctx.setLineDash([10, 8]);
+  ctx.globalAlpha = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(0, roadTop + roadH * 0.5);
+  ctx.lineTo(W, roadTop + roadH * 0.5);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
+
+  // Sidewalk strip
+  ctx.fillStyle = "#2a2a3a";
+  ctx.fillRect(0, roadTop, W, 6);
+  ctx.strokeStyle = "#888899";
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(0, roadTop + 6);
+  ctx.lineTo(W, roadTop + 6);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Street lamps
+  for (const lx of lampPositions) {
+    ctx.strokeStyle = "#888899";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(lx, roadTop + 5);
+    ctx.lineTo(lx, roadTop - 62);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(lx, roadTop - 62);
+    ctx.lineTo(lx + 10, roadTop - 68);
+    ctx.stroke();
+    ctx.fillStyle = "#ffe87a";
+    ctx.globalAlpha = 0.9;
+    ctx.fillRect((lx + 4) | 0, (roadTop - 72) | 0, 12, 5);
+    ctx.globalAlpha = 1;
+    const cone = ctx.createLinearGradient(lx + 10, roadTop - 67, lx + 10, roadTop + 5);
+    cone.addColorStop(0, "rgba(255,220,100,0.18)");
+    cone.addColorStop(1, "rgba(255,220,100,0)");
+    ctx.fillStyle = cone;
+    ctx.beginPath();
+    ctx.moveTo(lx + 10, roadTop - 67);
+    ctx.lineTo(lx - 18, roadTop + 5);
+    ctx.lineTo(lx + 38, roadTop + 5);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Cars
+  for (const c of cars) drawCar(c);
+
+  // Road sheen
+  ctx.strokeStyle = "#bc8dff";
+  ctx.globalAlpha = 0.15;
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(0, BUILDING_BASE);
-  ctx.lineTo(W, BUILDING_BASE);
+  ctx.moveTo(0, roadTop);
+  ctx.lineTo(W, roadTop);
   ctx.stroke();
   ctx.globalAlpha = 1;
 }
+// =========================
+// HARD MODE — DARK FOREST
+// =========================
+let lightningTimer = 0;
+let lightningFlash = 0;
+let lightningBolt = null;
+
+function triggerLightning() {
+  lightningFlash = 10 + Math.floor(Math.random() * 8);
+  // Generate a jagged bolt from top to ground
+  const bx = W * 0.2 + Math.random() * W * 0.6;
+  const segments = [];
+  let cx = bx, cy = 0;
+  while (cy < BUILDING_BASE - 20) {
+    const nx = cx + rand(-18, 18);
+    const ny = cy + 20 + Math.random() * 20;
+    segments.push([cx, cy, nx, ny]);
+    cx = nx; cy = ny;
+  }
+  lightningBolt = segments;
+}
+
+function updateLightning() {
+  lightningTimer++;
+  if (lightningTimer > 90 + Math.random() * 120) {
+    lightningTimer = 0;
+    triggerLightning();
+  }
+  if (lightningFlash > 0) lightningFlash--;
+  else lightningBolt = null;
+}
+
+// Pre-generate forest trees
+const FOREST_TREES = generateForest();
+function generateForest() {
+  const trees = [];
+  // Back layer — tall dark pines
+  for (let i = 0; i < 12; i++) {
+    const x = (i / 12) * W + rand(-8, 8);
+    const h = 120 + Math.random() * 100;
+    trees.push({ x, h, layer: 0, w: 18 + Math.random() * 14 });
+  }
+  // Mid layer
+  for (let i = 0; i < 9; i++) {
+    const x = (i / 9) * W + rand(-6, 6);
+    const h = 80 + Math.random() * 70;
+    trees.push({ x, h, layer: 1, w: 22 + Math.random() * 16 });
+  }
+  // Front layer — closest, widest
+  for (let i = 0; i < 7; i++) {
+    const x = (i / 7) * W + rand(-10, 10);
+    const h = 55 + Math.random() * 40;
+    trees.push({ x, h, layer: 2, w: 28 + Math.random() * 20 });
+  }
+  return trees;
+}
+
+function drawPineTree(x, baseY, w, h, col) {
+  // Draw a pixel pine — stacked triangles
+  const layers = Math.max(3, Math.floor(h / 22));
+  for (let i = 0; i < layers; i++) {
+    const t = i / layers;
+    const layerW = w * (0.3 + 0.7 * (i / layers));
+    const layerY = baseY - h + (h * 0.15 * i);
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(x, layerY);
+    ctx.lineTo(x - layerW / 2, layerY + h / layers * 1.2);
+    ctx.lineTo(x + layerW / 2, layerY + h / layers * 1.2);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // Trunk
+  ctx.fillStyle = "#1a1008";
+  ctx.fillRect((x - 3) | 0, (baseY - 14) | 0, 6, 14);
+}
 
 function drawBgHard() {
-  // Thunderstorm — dark, electric, heavy rain
+  const lit = lightningFlash > 0;
+
+  // Sky — near black, with lightning tint
   const sky = ctx.createLinearGradient(0, 0, 0, H);
-  sky.addColorStop(0, "#050508");
-  sky.addColorStop(0.5, "#0a0a14");
-  sky.addColorStop(1, "#0f0a18");
+  if (lit) {
+    sky.addColorStop(0, "#1a2a1a");
+    sky.addColorStop(0.5, "#1a3010");
+    sky.addColorStop(1, "#060e06");
+  } else {
+    sky.addColorStop(0, "#0a1a0a");
+    sky.addColorStop(0.5, "#0e1e0e");
+    sky.addColorStop(1, "#060e06");
+  }
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, W, H);
 
-  // Heavy rain streaks — more dense and longer
+  // Atmospheric fog/mist rays when lightning flashes
+  if (lit) {
+    for (let i = 0; i < 3; i++) {
+      const rx = W * 0.1 + i * W * 0.35;
+      const mist = ctx.createLinearGradient(rx, 0, rx + 30, BUILDING_BASE);
+      mist.addColorStop(0, "rgba(180,255,180,0.10)");
+      mist.addColorStop(1, "rgba(180,255,180,0)");
+      ctx.fillStyle = mist;
+      ctx.beginPath();
+      ctx.moveTo(rx - 20, 0);
+      ctx.lineTo(rx + 50, BUILDING_BASE);
+      ctx.lineTo(rx + 80, BUILDING_BASE);
+      ctx.lineTo(rx + 20, 0);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  // Heavy rain
   for (const s of RAIN_STREAKS) {
     ctx.save();
-    ctx.globalAlpha = s.alpha * 1.8;
-    ctx.strokeStyle = "#8ab4cc";
-    ctx.lineWidth = 1.2;
+    ctx.globalAlpha = lit ? s.alpha * 2.2 : s.alpha * 1.4;
+    ctx.strokeStyle = lit ? "#ccffcc" : "#4a6a4a";
+    ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(s.x, s.y);
-    ctx.lineTo(s.x - 2, s.y + s.len * 1.8);
+    ctx.lineTo(s.x - 2, s.y + s.len * 2);
     ctx.stroke();
     ctx.restore();
   }
 
-  // Lightning flash (random subtle ambient)
-  if (Math.random() < 0.003) {
-    ctx.fillStyle = "rgba(180,180,255,0.06)";
-    ctx.fillRect(0, 0, W, H);
+  // Back trees — very dark
+  for (const t of FOREST_TREES.filter(t => t.layer === 0)) {
+    drawPineTree(t.x, BUILDING_BASE, t.w, t.h, lit ? "#0d2210" : "#0f2210");
   }
 
-  // Storm clouds at top
-  ctx.fillStyle = "rgba(20,15,35,0.7)";
-  ctx.fillRect(0, 0, W, 60);
-
-  // Buildings — nearly pitch black, few lights
-  for (const b of BUILDINGS.filter(b => b.layer === 0)) {
-    ctx.fillStyle = "#050508";
-    ctx.fillRect(b.x, b.y, b.w, b.h);
-    for (const w of b.windows) {
-      if (w.lit && Math.random() < 0.3) {
-        ctx.fillStyle = "#6699cc";
-        ctx.globalAlpha = 0.4;
-        ctx.fillRect(w.x, w.y, 5, 4);
-        ctx.globalAlpha = 1;
-      }
-    }
-  }
-  for (const b of BUILDINGS.filter(b => b.layer === 1)) {
-    ctx.fillStyle = "#080810";
-    ctx.fillRect(b.x, b.y, b.w, b.h);
-    for (const w of b.windows) {
-      if (w.lit && Math.random() < 0.25) {
-        ctx.fillStyle = "#aaccff";
-        ctx.globalAlpha = 0.45;
-        ctx.fillRect(w.x, w.y, 5, 4);
-        ctx.globalAlpha = 1;
-      }
-    }
+  // Mid trees
+  for (const t of FOREST_TREES.filter(t => t.layer === 1)) {
+    drawPineTree(t.x, BUILDING_BASE, t.w, t.h, lit ? "#112a14" : "#142814");
   }
 
-  // Ground
+  // Glowing fireflies (tiny sparkling dots)
+  const time = Date.now() * 0.001;
+  for (let i = 0; i < 12; i++) {
+    const fx = (Math.sin(time * 0.3 + i * 1.7) * 0.5 + 0.5) * W;
+    const fy = BUILDING_BASE * 0.4 + Math.sin(time * 0.5 + i * 2.3) * BUILDING_BASE * 0.35;
+    const alpha = (Math.sin(time * 2 + i * 3.1) * 0.5 + 0.5) * 0.7;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "#aaff66";
+    ctx.fillRect(fx | 0, fy | 0, 2, 2);
+    // tiny cross sparkle
+    ctx.fillRect((fx - 1) | 0, (fy + 1) | 0, 1, 1);
+    ctx.fillRect((fx + 2) | 0, (fy + 1) | 0, 1, 1);
+  }
+  ctx.globalAlpha = 1;
+
+  // Front trees
+  for (const t of FOREST_TREES.filter(t => t.layer === 2)) {
+    drawPineTree(t.x, BUILDING_BASE, t.w, t.h, lit ? "#163018" : "#1a301a");
+  }
+
+  // Ground — dark mossy forest floor
   const ground = ctx.createLinearGradient(0, BUILDING_BASE, 0, H);
-  ground.addColorStop(0, "#05050a");
-  ground.addColorStop(1, "#0a0a15");
+  ground.addColorStop(0, lit ? "#0d1e0d" : "#0f1e0f");
+  ground.addColorStop(1, lit ? "#111a0a" : "#121a08");
   ctx.fillStyle = ground;
   ctx.fillRect(0, BUILDING_BASE, W, H - BUILDING_BASE);
 
-  ctx.strokeStyle = "#3a4aff";
-  ctx.globalAlpha = 0.25;
+  // Grass tufts on ground
+  ctx.fillStyle = lit ? "#1a3a1a" : "#1a3010";
+  for (let i = 0; i < 18; i++) {
+    const gx = (i / 18) * W + 8;
+    ctx.fillRect(gx | 0, BUILDING_BASE | 0, 4, 4);
+    ctx.fillRect((gx + 2) | 0, (BUILDING_BASE - 2) | 0, 3, 3);
+  }
+
+  // Lightning bolt
+  if (lit && lightningBolt) {
+    ctx.strokeStyle = lightningFlash > 6 ? "#ffffff" : "#aaffaa";
+    ctx.lineWidth = lightningFlash > 6 ? 2 : 1;
+    ctx.globalAlpha = lightningFlash / 14;
+    for (const [x1, y1, x2, y2] of lightningBolt) {
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    // Ground flash
+    ctx.fillStyle = "rgba(180,255,180,0.06)";
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // Ground edge line
+  ctx.strokeStyle = lit ? "#2a4a2a" : "#1e2e1e";
+  ctx.globalAlpha = 0.8;
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(0, BUILDING_BASE);
@@ -1178,32 +1419,11 @@ function drawTitleScreen() {
   ctx.fillStyle = PAL.border;
   ctx.fillText(`HIGH SCORE: ${best}`, W / 2, baseY + 168);
 
-  // Difficulty indicator — based on best score
-  const diffLevel = best >= 25 ? 3 : best >= 10 ? 2 : 1;
-  const diffLabel = diffLevel === 1 ? "EASY" : diffLevel === 2 ? "MEDIUM" : "HARD";
-  const dropR = 5;
-  const dropSpacing = 18;
-  const totalDropW = diffLevel * dropSpacing - (dropSpacing - dropR * 2);
-  const dropStartX = W / 2 - totalDropW / 2 - dropR + dropSpacing / 2;
-  const dropY = baseY + 193;
-
-  ctx.fillStyle = PAL.text;
-  ctx.font = "6px 'Press Start 2P'";
-  ctx.fillText(diffLabel, W / 2, dropY - 10);
-
-  for (let i = 0; i < 3; i++) {
-    const filled = i < diffLevel;
-    ctx.globalAlpha = filled ? 1 : 0.2;
-    ctx.fillStyle = filled ? "#d4faff" : PAL.text;
-    drawRaindrop(dropStartX + i * dropSpacing, dropY, dropR);
-  }
-  ctx.globalAlpha = 1;
-
   // Start prompt
   if (blinkT < 30) {
     ctx.fillStyle = PAL.accent;
     ctx.font = "8px 'Press Start 2P'";
-    ctx.fillText("PRESS SPACE TO START", W / 2, baseY + 222);
+    ctx.fillText("PRESS SPACE TO START", W / 2, baseY + 208);
   }
 
   // Sitting cat (keep “a lil under press space”)

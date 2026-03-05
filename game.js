@@ -1497,10 +1497,10 @@ function drawModeSelect() {
 
   // Nav hint
   ctx.fillStyle = "rgba(255,255,255,0.3)";
-  ctx.font = "5px 'Press Start 2P'";
+  ctx.font = "9px Orbitron, sans-serif";
   ctx.fillText("← → TO BROWSE", cx, H / 2 + 110 / 2 + 48);
 
-  ctx.textAlign = "left";
+  ctx.textAlign = "center";
 }
 
 // =========================
@@ -2046,7 +2046,7 @@ function drawControls() {
 
   ctx.textAlign = "center";
   if (blinkT < 30) {
-    ctx.font = "6px 'Press Start 2P'";
+    ctx.font = "9px Orbitron, sans-serif";
     ctx.fillStyle = PAL.accent;
     ctx.fillText("ESC / SPACE TO GO BACK", W/2, H - 16);
   }
@@ -2311,7 +2311,7 @@ function drawAchievementsScreen() {
   ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(0, H-28); ctx.lineTo(W, H-28); ctx.stroke();
   if (blinkT < 30) {
-    ctx.font = "5px 'Press Start 2P'";
+    ctx.font = "9px Orbitron, sans-serif";
     ctx.fillStyle = PAL.accent;
     ctx.textAlign = "center";
     ctx.fillText("SPACE / ESC TO GO BACK", W/2, H - 10);

@@ -6,9 +6,9 @@ D0DZ is a retro-style arcade dodger game inspired by classic 1980s pixel games. 
 ## 📸 Screens
 
 <p align="center">
-  <img src="assets/menu.png" width="25%">
+  <img src="assets/menu.png" width="22%">
   <img src="assets/htp.png" width="22%">
-  <img src="assets/gameplay.png" width="25%">
+  <img src="assets/gameplay.png" width="22%">
   <img src="assets/achievements.png" width="20%">
 </p>
 

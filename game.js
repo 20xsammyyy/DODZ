@@ -527,6 +527,7 @@ addEventListener("keydown", (e) => {
         state = "leaderboard";
       } else if (titleMenuIndex === 4) {
         state = "achievements";
+        achPage = 0;
       }
     } else if (state === "modeselect") {
       playSfx(SFX.start);
@@ -541,6 +542,10 @@ addEventListener("keydown", (e) => {
   if (state === "title") {
     if (e.key === "ArrowUp")   titleMenuIndex = (titleMenuIndex + 4) % 5;
     if (e.key === "ArrowDown") titleMenuIndex = (titleMenuIndex + 1) % 5;
+  }
+  if (state === "achievements") {
+    if (e.key === "ArrowLeft")  achPage = 0;
+    if (e.key === "ArrowRight") achPage = 1;
   }
   if (state === "gameover" && e.key.toLowerCase() === "s") {
     state = "leaderboard";
@@ -1882,7 +1887,7 @@ function drawTitleScreen() {
 
   ctx.font = FONT_UI_SM;
   ctx.fillStyle = "rgba(255,255,255,0.85)";
-  ctx.fillText("PIXIE HATES WATER", W/2, 120);
+  ctx.fillText("GUIDE HER HOME", W/2, 120);
 
   // === MENU BOX ===
   const menuItems = ["START GAME", "HOW TO PLAY", "CONTROLS", "SCORES", "ACHIEVEMENTS"];
@@ -1920,7 +1925,7 @@ function drawTitleScreen() {
   }
 
   // Nav hint
-  ctx.font = FONT_UI;
+  ctx.font = "8px 'Press Start 2P'";
   ctx.fillStyle = "rgba(255,255,255,0.85)";
   ctx.fillText("Press ↑↓ ; SPACE to CHOOSE", W/2, boxY + boxH + 20);
 
@@ -1957,7 +1962,7 @@ function drawHowToPlay() {
     ["MOVE", ""],
     ["",     "TOGGLE LEFT / RIGHT ARROWS"],
     ["",     ""],
-    ["DODGE", ""],
+    ["DANGER", ""],
     ["",      "AVOID THE RAINDROPS. PIXIE HATES"],
     ["",     "WATER!"],
     ["",     ""],
@@ -2076,10 +2081,6 @@ function drawGameOver() {
   ctx.fillStyle = PAL.text;
   ctx.fillText(`SCORE: ${score}`, cx, cy);
 
-  // Best
-  ctx.fillStyle = PAL.border;
-  ctx.fillText(`BEST: ${best}`, cx, cy + 28);
-
   // New best!
   if (score === best && score > 0) {
     ctx.fillStyle = PAL.accent;
@@ -2091,7 +2092,7 @@ function drawGameOver() {
   const dropR = 5;
   const dropSpacing = 18;
   const dropStartX = cx - dropSpacing;
-  const dropY = cy + 72;
+  const dropY = cy + 45;
 
   ctx.font = "6px 'Press Start 2P'";
   ctx.fillStyle = PAL.text;
@@ -2113,10 +2114,10 @@ function drawGameOver() {
 
   // Scores link
   ctx.fillStyle = "rgba(212,250,255,0.5)";
-  ctx.font = "5px 'Press Start 2P'";
+  ctx.font = "7px 'Press Start 2P'";
   ctx.fillText("S — VIEW SCORES", cx, cy + 134);
 
-  ctx.textAlign = "left";
+  ctx.textAlign = "center";
 }
 
 function drawLeaderboard() {
@@ -2145,7 +2146,7 @@ function drawLeaderboard() {
 
   // Title
   ctx.textAlign = "center";
-  ctx.font = "9px 'Press Start 2P'";
+  ctx.font = "10px 'Press Start 2P'";
   ctx.fillStyle = "#f0c040";
   ctx.fillText("HIGH SCORES", W/2 + 10, 30);
 
@@ -2239,82 +2240,110 @@ function drawLeaderboard() {
 }
 
 
+let achPage = 0; // 0 = first 5, 1 = last 5
+const ACH_PER_PAGE = 5;
+
 function drawAchievementsScreen() {
   ctx.fillStyle = "#080610";
   ctx.fillRect(0, 0, W, H);
 
   // Header
   ctx.fillStyle = "#16102a";
-  ctx.fillRect(0, 0, W, 46);
+  ctx.fillRect(0, 0, W, 50);
   ctx.strokeStyle = "#f0c040";
   ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(0, 46); ctx.lineTo(W, 46); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, 50); ctx.lineTo(W, 50); ctx.stroke();
 
   ctx.textAlign = "center";
-  ctx.font = "9px 'Press Start 2P'";
+  ctx.font = "10px 'Press Start 2P'";
   ctx.fillStyle = "#f0c040";
-  ctx.fillText("ACHIEVEMENTS", W/2, 30);
+  ctx.fillText("ACHIEVEMENTS", W/2, 22);
 
   const ach = loadAchievements();
-  const unlocked = ACHIEVEMENTS.filter(a => ach[a.id]).length;
+  const unlockedCount = ACHIEVEMENTS.filter(a => ach[a.id]).length;
 
-  ctx.font = "5px 'Press Start 2P'";
+  ctx.font = "7px 'Press Start 2P'";
   ctx.fillStyle = "rgba(212,250,255,0.5)";
-  ctx.fillText(unlocked + " / " + ACHIEVEMENTS.length + " UNLOCKED", W/2, 42);
+  ctx.fillText(unlockedCount + " / " + ACHIEVEMENTS.length + " UNLOCKED", W/2, 36);
 
-  // List
-  const startY = 60;
-  const rowH = 38;
-  for (let i = 0; i < ACHIEVEMENTS.length; i++) {
-    const a = ACHIEVEMENTS[i];
-    const unlocked = !!ach[a.id];
+  // Page indicator dots — top right
+  ctx.fillStyle = achPage === 0 ? "#f0c040" : "rgba(240,192,64,0.3)";
+  ctx.beginPath(); ctx.arc(W - 24, 22, 4, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = achPage === 1 ? "#f0c040" : "rgba(240,192,64,0.3)";
+  ctx.beginPath(); ctx.arc(W - 12, 22, 4, 0, Math.PI*2); ctx.fill();
+
+  // Slice for current page
+  const pageStart = achPage * ACH_PER_PAGE;
+  const pageItems = ACHIEVEMENTS.slice(pageStart, pageStart + ACH_PER_PAGE);
+
+  const startY = 62;
+  const rowH = 76;
+
+  for (let i = 0; i < pageItems.length; i++) {
+    const a = pageItems[i];
+    const isUnlocked = !!ach[a.id];
     const y = startY + i * rowH;
 
     // Row bg
-    ctx.fillStyle = unlocked ? "rgba(240,192,64,0.07)" : "rgba(255,255,255,0.02)";
-    ctx.fillRect(8, y, W - 16, rowH - 3);
-    ctx.strokeStyle = unlocked ? "rgba(240,192,64,0.3)" : "rgba(255,255,255,0.06)";
+    ctx.fillStyle = isUnlocked ? "rgba(240,192,64,0.08)" : "rgba(255,255,255,0.02)";
+    ctx.fillRect(8, y, W - 16, rowH - 6);
+    ctx.strokeStyle = isUnlocked ? "rgba(240,192,64,0.35)" : "rgba(255,255,255,0.08)";
     ctx.lineWidth = 1;
-    ctx.strokeRect(8, y, W - 16, rowH - 3);
+    ctx.strokeRect(8, y, W - 16, rowH - 6);
+
+    // Left gold bar if unlocked
+    if (isUnlocked) {
+      ctx.fillStyle = "#f0c040";
+      ctx.fillRect(8, y, 3, rowH - 6);
+    }
 
     // Icon
-    ctx.font = "14px sans-serif";
+    ctx.font = "22px sans-serif";
     ctx.textAlign = "center";
-    ctx.globalAlpha = unlocked ? 1 : 0.25;
-    ctx.fillText(a.icon, 28, y + 22);
+    ctx.globalAlpha = isUnlocked ? 1 : 0.2;
+    ctx.fillText(a.icon, 34, y + 38);
     ctx.globalAlpha = 1;
 
     // Name
     ctx.textAlign = "left";
-    ctx.font = "6px 'Press Start 2P'";
-    ctx.fillStyle = unlocked ? "#f0c040" : "rgba(255,255,255,0.3)";
-    ctx.fillText(a.name, 44, y + 14);
+    ctx.font = "8px 'Press Start 2P'";
+    ctx.fillStyle = isUnlocked ? "#f0c040" : "rgba(255,255,255,0.25)";
+    ctx.fillText(a.name, 54, y + 22);
 
     // Desc
-    ctx.font = "5px 'Press Start 2P'";
-    ctx.fillStyle = unlocked ? "rgba(212,250,255,0.8)" : "rgba(255,255,255,0.2)";
-    ctx.fillText(a.desc, 44, y + 27);
+    ctx.font = "7px 'Press Start 2P'";
+    ctx.fillStyle = isUnlocked ? "rgba(212,250,255,0.85)" : "rgba(255,255,255,0.18)";
+    ctx.fillText(a.desc, 54, y + 38);
 
-    // Unlocked checkmark
-    if (unlocked) {
+    // Status
+    if (isUnlocked) {
       ctx.fillStyle = "#00ff88";
-      ctx.font = "8px 'Press Start 2P'";
+      ctx.font = "6px 'Press Start 2P'";
+      ctx.fillText("UNLOCKED", 54, y + 54);
       ctx.textAlign = "right";
-      ctx.fillText("✓", W - 14, y + 20);
+      ctx.font = "12px sans-serif";
+      ctx.fillText("✓", W - 14, y + 36);
+    } else {
+      ctx.fillStyle = "rgba(255,255,255,0.15)";
+      ctx.font = "6px 'Press Start 2P'";
+      ctx.fillText("LOCKED", 54, y + 54);
     }
   }
 
   // Footer
   ctx.fillStyle = "#16102a";
-  ctx.fillRect(0, H - 28, W, 28);
+  ctx.fillRect(0, H - 34, W, 34);
   ctx.strokeStyle = "#f0c040";
   ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(0, H-28); ctx.lineTo(W, H-28); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, H-34); ctx.lineTo(W, H-34); ctx.stroke();
+
+  ctx.textAlign = "center";
+  ctx.font = "6px 'Press Start 2P'";
+  ctx.fillStyle = "rgba(212,250,255,0.5)";
+  ctx.fillText("← →  FLIP PAGE", W/2, H - 20);
   if (blinkT < 30) {
-    ctx.font = "9px Orbitron, sans-serif";
     ctx.fillStyle = PAL.accent;
-    ctx.textAlign = "center";
-    ctx.fillText("SPACE / ESC TO GO BACK", W/2, H - 10);
+    ctx.fillText("SPACE / ESC TO GO BACK", W/2, H - 8);
   }
   ctx.textAlign = "left";
 }

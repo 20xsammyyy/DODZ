@@ -53,6 +53,9 @@ let left = false;
 let right = false;
 let facing = "east";
 
+let dust = [];   // running puffs
+let splash = []; // raindrop splashes
+
 let mouseX = 0;
 let mouseY = 0;
 
@@ -355,6 +358,75 @@ addEventListener("keyup", (e) => {
   if (e.key === "ArrowRight") right = false;
 });
 
+function rand(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+function spawnDust(px) {
+  // small burst behind feet while running
+  // px is the player's x (hitbox x)
+  const amount = 2 + Math.floor(Math.random() * 2); // 2–3 bits
+  for (let i = 0; i < amount; i++) {
+    dust.push({
+      x: px + rand(-2, 6),
+      y: BUILDING_BASE - rand(3, 7),
+      vx: rand(-0.3, 0.3),
+      vy: rand(-0.15, -0.35),
+      life: 16 + Math.floor(Math.random() * 8),
+      size: 2 + Math.floor(Math.random() * 2),
+    });
+  }
+}
+
+function spawnSplash(x, y) {
+  // little splash burst when raindrop hits ground
+  const amount = 6 + Math.floor(Math.random() * 4); // 6–9 bits
+  for (let i = 0; i < amount; i++) {
+    splash.push({
+      x,
+      y,
+      vx: rand(-0.9, 0.9),
+      vy: rand(-1.6, -0.7),
+      life: 14 + Math.floor(Math.random() * 10),
+      size: 2,
+    });
+  }
+}
+
+function updateParticles() {
+  // dust
+  for (const p of dust) {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.02; // tiny gravity
+    p.life -= 1;
+  }
+  dust = dust.filter((p) => p.life > 0);
+
+  // splash
+  for (const p of splash) {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.05; // stronger gravity for splash
+    p.life -= 1;
+  }
+  splash = splash.filter((p) => p.life > 0);
+}
+
+function drawParticles() {
+  // Dust: subtle, darker/lavender-ish (use palette border a bit transparent-ish by mixing sizes)
+  ctx.fillStyle = "#8977c9"; // from your palette
+  for (const p of dust) {
+    ctx.fillRect((p.x | 0), (p.y | 0), p.size, p.size);
+  }
+
+  // Splash: light blue bits
+  ctx.fillStyle = "#d4faff"; // from your palette
+  for (const p of splash) {
+    ctx.fillRect((p.x | 0), (p.y | 0), p.size, p.size);
+  }
+}
+
 // =========================
 // UPDATE
 // =========================
@@ -396,6 +468,10 @@ function update() {
   player.y = GROUND_Y - player.h;
 
   const moving = left || right;
+  if (moving && state === "playing") {
+  // every few frames so it doesn't spam
+    if ((blinkT % 4) === 0) spawnDust(player.x + (player.w * 0.5));
+  }
   if (left)  player.x -= player.speed;
   if (right) player.x += player.speed;
   player.x = clamp(player.x, 0, W - player.w);
@@ -425,9 +501,10 @@ function update() {
   for (const e of enemies) e.y += e.vy;
 
   enemies = enemies.filter((e) => {
-    if (e.y > H + 30) {
+    if (e.y + e.h >= BUILDING_BASE) {
       score += 1;
       playSfx(SFX.score);
+      spawnSplash(e.x + e.w / 2, BUILDING_BASE);
       return false;
     }
     return true;
@@ -444,6 +521,8 @@ function update() {
       break;
     }
   }
+
+  updateParticles();
 }
 
 // =========================
@@ -788,6 +867,7 @@ function draw() {
   } else if (state === "playing") {
     drawCityscape();
     drawEnemies();
+    drawParticles();
     drawPlayer();
   } else if (state === "gameover") {
     drawCityscape();

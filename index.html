@@ -358,22 +358,6 @@
       letter-spacing: 1px;
     }
 
-    /* Pink + lavender decorative stripe across bottom */
-    .gb-stripe {
-      position: absolute;
-      bottom: 30px; left: 18px; right: 18px;
-      height: 3px;
-      background: linear-gradient(90deg,
-        transparent 0%,
-        var(--pink)    20%,
-        var(--lavender) 50%,
-        var(--pink)    80%,
-        transparent 100%
-      );
-      opacity: 0.55;
-      border-radius: 2px;
-    }
-
     .gb-bottom {
       display: flex;
       justify-content: center;
@@ -406,12 +390,6 @@
       <div class="gb-screen-bezel">
         <canvas id="game" width="320" height="480"></canvas>
         <div class="scanlines" aria-hidden="true"></div>
-      </div>
-
-      <div class="gb-speaker">
-        <span></span><span></span><span></span><span></span>
-        <span></span><span></span><span></span><span></span>
-        <span></span><span></span><span></span><span></span>
       </div>
     </div>
 
@@ -446,8 +424,12 @@
         <span class="btn-pill-label">START</span>
       </div>
     </div>
+    <div class="gb-speaker">
+      <span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span>
+    </div>
 
-    <div class="gb-stripe"></div>
 
     <div class="gb-bottom">
       <span class="gb-phones">&#9426; HEADPHONES</span>

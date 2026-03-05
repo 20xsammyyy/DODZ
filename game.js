@@ -156,8 +156,92 @@ function saveToLeaderboard(sc, mode) {
   lb.splice(10); // keep top 10
   localStorage.setItem("dodz_lb", JSON.stringify(lb));
 }
+// =========================
+// ACHIEVEMENT SYSTEM
+// =========================
+const ACHIEVEMENTS = [
+  { id: "first_game",    icon: "🎮", name: "FIRST STEPS",   desc: "Play your first game",        check: (s,d,m,g) => g >= 1 },
+  { id: "rain_survivor", icon: "🌧", name: "RAIN SURVIVOR", desc: "Survive 30 seconds",          check: (s,d,m,g) => d >= 1800 },
+  { id: "dodger",        icon: "💧", name: "DODGER",        desc: "Score 50 in one game",        check: (s,d,m,g) => s >= 50 },
+  { id: "score_25",      icon: "⭐", name: "GETTING GOOD",  desc: "Reach a score of 25",         check: (s,d,m,g) => s >= 25 },
+  { id: "score_50",      icon: "🌟", name: "STAR PLAYER",   desc: "Reach a score of 50",         check: (s,d,m,g) => s >= 50 },
+  { id: "score_100",     icon: "⚡", name: "STORM MASTER",  desc: "Reach a score of 100",        check: (s,d,m,g) => s >= 100 },
+  { id: "score_150",     icon: "👑", name: "LEGENDARY",     desc: "Reach a score of 150",        check: (s,d,m,g) => s >= 150 },
+  { id: "hard_mode",     icon: "💀", name: "DAREDEVIL",     desc: "Finish a game on Hard",       check: (s,d,m,g) => m === 2 },
+  { id: "hard_25",       icon: "🔥", name: "FIRE KITTY",    desc: "Score 25+ on Hard mode",      check: (s,d,m,g) => m === 2 && s >= 25 },
+  { id: "games_10",      icon: "🏆", name: "DEDICATED",     desc: "Play 10 games total",         check: (s,d,m,g) => g >= 10 },
+];
+
+function loadAchievements() {
+  try { return JSON.parse(localStorage.getItem("dodz_ach") || "{}"); }
+  catch { return {}; }
+}
+function saveAchievements(ach) {
+  localStorage.setItem("dodz_ach", JSON.stringify(ach));
+}
+function loadStats() {
+  try { return JSON.parse(localStorage.getItem("dodz_stats") || '{"gamesPlayed":0}'); }
+  catch { return { gamesPlayed: 0 }; }
+}
+function saveStats(stats) {
+  localStorage.setItem("dodz_stats", JSON.stringify(stats));
+}
+
+let achToasts = [];
+
+function checkAchievements(score, survivalFrames, mode) {
+  const ach = loadAchievements();
+  const stats = loadStats();
+  stats.gamesPlayed = (stats.gamesPlayed || 0) + 1;
+  saveStats(stats);
+  for (const a of ACHIEVEMENTS) {
+    if (!ach[a.id] && a.check(score, survivalFrames, mode, stats.gamesPlayed)) {
+      ach[a.id] = { unlockedAt: Date.now() };
+      achToasts.push({ achievement: a, timer: 240 });
+    }
+  }
+  saveAchievements(ach);
+}
+
+function drawAchievementToasts() {
+  if (achToasts.length === 0) return;
+  const toast = achToasts[0];
+  toast.timer--;
+  if (toast.timer <= 0) { achToasts.shift(); return; }
+
+  const a = toast.achievement;
+  const alpha = Math.min(1, toast.timer / 20, (240 - toast.timer + 20) / 20);
+  const toastW = 210, toastH = 44;
+  const toastX = W / 2 - toastW / 2;
+  const toastY = 10;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "#1a0e30";
+  ctx.fillRect(toastX, toastY, toastW, toastH);
+  ctx.strokeStyle = "#f0c040";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(toastX, toastY, toastW, toastH);
+  ctx.fillStyle = "#f0c040";
+  ctx.fillRect(toastX, toastY, 4, toastH);
+  ctx.font = "16px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(a.icon, toastX + 22, toastY + 29);
+  ctx.textAlign = "left";
+  ctx.font = "5px 'Press Start 2P'";
+  ctx.fillStyle = "#f0c040";
+  ctx.fillText("ACHIEVEMENT UNLOCKED!", toastX + 36, toastY + 16);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "6px 'Press Start 2P'";
+  ctx.fillText(a.name, toastX + 36, toastY + 32);
+  ctx.restore();
+  ctx.textAlign = "left";
+}
+
+
 let blinkT = 0;
-let titleMenuIndex = 0; // 0=start, 1=howtoplay, 2=controls
+let titleMenuIndex = 0;
+let survivalFrames = 0; // 0=start, 1=howtoplay, 2=controls
 
 // =========================
 // PLAYER ANIMATION
@@ -362,6 +446,7 @@ function resetGame() {
   enemies = [];
   spawnTimer = 0;
   score = 0;
+  survivalFrames = 0;
   frame = 0;
   frameTimer = 0;
   anim = "idle";
@@ -428,7 +513,7 @@ addEventListener("keydown", (e) => {
 
   if (e.key === " " || e.code === "Space") {
     unlockSound();
-    if (state === "howtoplay" || state === "controls" || state === "leaderboard") {
+    if (state === "howtoplay" || state === "controls" || state === "leaderboard" || state === "achievements") {
       state = "title"; blinkT = 0; titleMenuIndex = 0;
     } else if (state === "title" || state === "gameover") {
       if (titleMenuIndex === 0) {
@@ -440,6 +525,8 @@ addEventListener("keydown", (e) => {
         state = "controls";
       } else if (titleMenuIndex === 3) {
         state = "leaderboard";
+      } else if (titleMenuIndex === 4) {
+        state = "achievements";
       }
     } else if (state === "modeselect") {
       playSfx(SFX.start);
@@ -452,13 +539,13 @@ addEventListener("keydown", (e) => {
     if (e.key === "ArrowRight") selectedMode = (selectedMode + 1) % 3;
   }
   if (state === "title") {
-    if (e.key === "ArrowUp")   titleMenuIndex = (titleMenuIndex + 3) % 4;
-    if (e.key === "ArrowDown") titleMenuIndex = (titleMenuIndex + 1) % 4;
+    if (e.key === "ArrowUp")   titleMenuIndex = (titleMenuIndex + 4) % 5;
+    if (e.key === "ArrowDown") titleMenuIndex = (titleMenuIndex + 1) % 5;
   }
   if (state === "gameover" && e.key.toLowerCase() === "s") {
     state = "leaderboard";
   }
-  if ((state === "howtoplay" || state === "controls" || state === "leaderboard") && e.key === "Escape") {
+  if ((state === "howtoplay" || state === "controls" || state === "leaderboard" || state === "achievements") && e.key === "Escape") {
     state = "title"; blinkT = 0; titleMenuIndex = 0;
   }
 });
@@ -543,7 +630,7 @@ function drawParticles() {
 function update() {
   blinkT = (blinkT + 1) % 60;
 
-  if (state === "title" || state === "howtoplay" || state === "controls" || state === "leaderboard") {
+  if (state === "title" || state === "howtoplay" || state === "controls" || state === "leaderboard" || state === "achievements") {
     titleFrameTimer++;
     if (titleFrameTimer >= 10) {
       titleFrameTimer = 0;
@@ -587,6 +674,8 @@ function update() {
 
   // Lock Pixie to GROUND_Y every frame
   player.y = GROUND_Y - player.h;
+
+  if (state === "playing") survivalFrames++;
 
   const moving = left || right;
   if (moving && state === "playing") {
@@ -637,6 +726,7 @@ function update() {
       playSfx(SFX.hit);
       state = "gameover";
       saveToLeaderboard(score, selectedMode);
+      checkAchievements(score, survivalFrames, selectedMode);
       if (score > best) {
         best = score;
         localStorage.setItem("dodz_best", String(best));
@@ -1759,9 +1849,9 @@ function drawTitleScreen() {
 
   // Ground / grass strip
   ctx.fillStyle = "#0e0c1a";
-  ctx.fillRect(0, H * 0.73, W, H - H*0.73);
+  ctx.fillRect(0, H * 0.82, W, H - H*0.82);
   ctx.fillStyle = "#1a1428";
-  ctx.fillRect(0, H * 0.73, W, 6);
+  ctx.fillRect(0, H * 0.82, W, 6);
 
   // Rain streaks (light)
   for (const s of RAIN_STREAKS) {
@@ -1778,7 +1868,7 @@ function drawTitleScreen() {
 
   // Pixie sitting on ground
   const catX = Math.floor(W * 0.15);
-  const catY = Math.floor(H * 0.73) - DRAW_H + 22;
+  const catY = Math.floor(H * 0.73) - DRAW_H + 70;
   ctx.drawImage(sitImg, titleFrame * FRAME_W, 0, FRAME_W, FRAME_H, catX, catY, DRAW_W, DRAW_H);
 
   // === TITLE TEXT — big, centred-right ===
@@ -1795,8 +1885,8 @@ function drawTitleScreen() {
   ctx.fillText("PIXIE HATES WATER", W/2, 120);
 
   // === MENU BOX ===
-  const menuItems = ["START GAME", "HOW TO PLAY", "CONTROLS", "SCORES"];
-  const boxW = 190, boxH = 106;
+  const menuItems = ["START GAME", "HOW TO PLAY", "CONTROLS", "SCORES", "ACHIEVEMENTS"];
+  const boxW = 190, boxH = 130;
   const boxX = W/2 - boxW/2, boxY = H * 0.36;
 
   // Box shadow
@@ -1835,7 +1925,7 @@ function drawTitleScreen() {
   ctx.fillText("Press ↑↓ ; SPACE to CHOOSE", W/2, boxY + boxH + 20);
 
   // Blinking press space (under Pixie)
-  const promptY = Math.floor(H * 0.73) + 28;
+  const promptY = Math.floor(H * 0.73) + 75;
 
   if (blinkT < 30) {
     ctx.textAlign = "center";                 // ensure centered
@@ -2149,6 +2239,87 @@ function drawLeaderboard() {
 }
 
 
+function drawAchievementsScreen() {
+  ctx.fillStyle = "#080610";
+  ctx.fillRect(0, 0, W, H);
+
+  // Header
+  ctx.fillStyle = "#16102a";
+  ctx.fillRect(0, 0, W, 46);
+  ctx.strokeStyle = "#f0c040";
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, 46); ctx.lineTo(W, 46); ctx.stroke();
+
+  ctx.textAlign = "center";
+  ctx.font = "9px 'Press Start 2P'";
+  ctx.fillStyle = "#f0c040";
+  ctx.fillText("ACHIEVEMENTS", W/2, 30);
+
+  const ach = loadAchievements();
+  const unlocked = ACHIEVEMENTS.filter(a => ach[a.id]).length;
+
+  ctx.font = "5px 'Press Start 2P'";
+  ctx.fillStyle = "rgba(212,250,255,0.5)";
+  ctx.fillText(unlocked + " / " + ACHIEVEMENTS.length + " UNLOCKED", W/2, 42);
+
+  // List
+  const startY = 60;
+  const rowH = 38;
+  for (let i = 0; i < ACHIEVEMENTS.length; i++) {
+    const a = ACHIEVEMENTS[i];
+    const unlocked = !!ach[a.id];
+    const y = startY + i * rowH;
+
+    // Row bg
+    ctx.fillStyle = unlocked ? "rgba(240,192,64,0.07)" : "rgba(255,255,255,0.02)";
+    ctx.fillRect(8, y, W - 16, rowH - 3);
+    ctx.strokeStyle = unlocked ? "rgba(240,192,64,0.3)" : "rgba(255,255,255,0.06)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(8, y, W - 16, rowH - 3);
+
+    // Icon
+    ctx.font = "14px sans-serif";
+    ctx.textAlign = "center";
+    ctx.globalAlpha = unlocked ? 1 : 0.25;
+    ctx.fillText(a.icon, 28, y + 22);
+    ctx.globalAlpha = 1;
+
+    // Name
+    ctx.textAlign = "left";
+    ctx.font = "6px 'Press Start 2P'";
+    ctx.fillStyle = unlocked ? "#f0c040" : "rgba(255,255,255,0.3)";
+    ctx.fillText(a.name, 44, y + 14);
+
+    // Desc
+    ctx.font = "5px 'Press Start 2P'";
+    ctx.fillStyle = unlocked ? "rgba(212,250,255,0.8)" : "rgba(255,255,255,0.2)";
+    ctx.fillText(a.desc, 44, y + 27);
+
+    // Unlocked checkmark
+    if (unlocked) {
+      ctx.fillStyle = "#00ff88";
+      ctx.font = "8px 'Press Start 2P'";
+      ctx.textAlign = "right";
+      ctx.fillText("✓", W - 14, y + 20);
+    }
+  }
+
+  // Footer
+  ctx.fillStyle = "#16102a";
+  ctx.fillRect(0, H - 28, W, 28);
+  ctx.strokeStyle = "#f0c040";
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, H-28); ctx.lineTo(W, H-28); ctx.stroke();
+  if (blinkT < 30) {
+    ctx.font = "5px 'Press Start 2P'";
+    ctx.fillStyle = PAL.accent;
+    ctx.textAlign = "center";
+    ctx.fillText("SPACE / ESC TO GO BACK", W/2, H - 10);
+  }
+  ctx.textAlign = "left";
+}
+
+
 // =========================
 // MAIN DRAW
 // =========================
@@ -2161,6 +2332,8 @@ function draw() {
     drawControls();
   } else if (state === "leaderboard") {
     drawLeaderboard();
+  } else if (state === "achievements") {
+    drawAchievementsScreen();
   } else if (state === "title") {
     drawTitleScreen();
   } else if (state === "modeselect") {
@@ -2174,6 +2347,7 @@ function draw() {
     drawEnemies();
     drawParticles();
     drawPlayer();
+    drawAchievementToasts();
   } else if (state === "gameover") {
     if (selectedMode === 0) drawBgEasy();
     else if (selectedMode === 1) drawBgMedium();

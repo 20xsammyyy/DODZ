@@ -6,7 +6,7 @@
 
 ## 🎮 Gameplay
 
-Dodge falling raindrops by moving left and right. The longer Pixie survives, the higher your score. One hit and it's game over!
+Dodge falling raindrops by moving left and right. The longer Pixie survives, the higher your score. One hit from the rain and it's game over!
 
 ---
 
@@ -22,12 +22,12 @@ Dodge falling raindrops by moving left and right. The longer Pixie survives, the
 
 ## Play right from your PC!
 
-No installation or downloads required — D0DZ runs directly in your browser.
+No installation or downloads required, D0DZ runs directly in your browser.
 
 **Option 1 — Play from the files directly:**
 1. Download or clone this repository
    ```
-   git clone https://github.com/YOUR_USERNAME/dodz.git
+   git clone https://github.com/20xsammyyy/DODZ.git
    ```
 2. Open the project folder
 3. Double-click `index.html` — it will open in your browser and you're ready to play!

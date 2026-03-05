@@ -3,7 +3,7 @@
 D0DZ is a retro-style arcade dodger game inspired by classic 1980s pixel games. Play as Pixie, a cat who hates water, and help her survive the rainstorm to make it home dry.
 
 ---
-## 📸 Screenshot
+## 📸 Main Menu 
 
 <p align="center">
   <img src="assets/menu.png" width="450">

@@ -1,6 +1,6 @@
 # D0DZ 🌧️
 
-**D0DZ** is a retro-style arcade dodger game inspired by classic 1980s pixel games. Play as Pixie — a cat who *hates* water — and help her survive the rainstorm for as long as possible.
+**D0DZ** is a retro-style arcade dodger game inspired by classic 1980s pixel games. Play as Pixie, a cat who *hates* water; help her survive the rainstorm in her city and find her way home.
 
 ---
 
@@ -20,7 +20,7 @@ Dodge falling raindrops by moving left and right. The longer Pixie survives, the
 
 ---
 
-## How to Play on Your PC
+## Play right from your PC!
 
 No installation or downloads required — D0DZ runs directly in your browser.
 
@@ -36,7 +36,6 @@ No installation or downloads required — D0DZ runs directly in your browser.
 
 If sprites or sounds aren't loading, run a simple local server instead:
 
-*With Python (most computers have this):*
 ```bash
 # Python 3
 python -m http.server 8000

@@ -2132,17 +2132,35 @@ function drawLeaderboard() {
   ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(0, 46); ctx.lineTo(W, 46); ctx.stroke();
 
-  // Trophy icon (pixel drawn)
-  const tx = 20, ty = 26;
-  ctx.fillStyle = "#f0c040";
-  ctx.fillRect(tx, ty-10, 16, 12);       // cup body
-  ctx.fillRect(tx+2, ty+2, 12, 6);       // cup lower
-  ctx.fillRect(tx+5, ty+8, 6, 4);        // stem
-  ctx.fillRect(tx+3, ty+12, 10, 3);      // base
-  ctx.fillRect(tx-3, ty-8, 3, 7);        // left handle
-  ctx.fillRect(tx+16, ty-8, 3, 7);       // right handle
-  ctx.fillStyle = "#ffd060";
-  ctx.fillRect(tx+4, ty-8, 8, 6);        // shine
+  // Trophy icon — small, clean, fits in header
+  const tx = 50, ty = 6;
+  const P = 2;
+  const f = (x, y, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(tx+x, ty+y, w, h); };
+
+  // Bowl
+  f(0, 8,  20, 12, "#cc8800");  // outer
+  f(2, 9,  16, 10, "#f0c040");  // inner
+  f(3, 10,  7,  6, "#ffee88");  // highlight
+  f(0,  8, 20,  2, "#aa6600");  // rim
+
+  // Handles
+  f(-4, 10,  4,  8, "#e8a800");
+  f(-4, 10,  2,  8, "#aa6600");
+  f(20, 10,  4,  8, "#e8a800");
+  f(22, 10,  2,  4, "#ffdd60");
+
+  // Lower body
+  f(4, 20, 12,  4, "#cc8800");
+  f(5, 20, 10,  3, "#e8a800");
+
+  // Stem
+  f(8, 24,  4,  5, "#aa6600");
+  f(9, 24,  2,  5, "#e8a800");
+
+  // Base
+  f(3, 29, 14,  4, "#aa6600");
+  f(4, 29, 12,  3, "#cc8800");
+  f(5, 29,  5,  2, "#ffdd60");
 
   // Title
   ctx.textAlign = "center";
